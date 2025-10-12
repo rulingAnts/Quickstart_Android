@@ -21,15 +21,17 @@ class XmlImportService {
 
     int importCount = 0;
 
-    // Parse XML structure - adapt based on actual Dekereke format
-    // This is a basic implementation that should be adjusted based on actual XML structure
-    final entries = document.findAllElements('Entry');
+    // Parse XML structure using actual Dekereke format
+    // Root element is <phon_data> and row elements are <data_form>
+    final entries = document.findAllElements('data_form');
 
     for (final entryElement in entries) {
       try {
         final reference = _getElementText(entryElement, 'Reference') ?? '';
         final gloss = _getElementText(entryElement, 'Gloss') ?? '';
-        final pictureFilename = _getElementText(entryElement, 'Picture');
+        // Try Image_File first (actual QWOM format), fallback to Picture for compatibility
+        final pictureFilename = _getElementText(entryElement, 'Image_File') ?? 
+                               _getElementText(entryElement, 'Picture');
 
         if (reference.isEmpty || gloss.isEmpty) {
           continue; // Skip invalid entries
@@ -63,9 +65,9 @@ class XmlImportService {
     final builder = XmlBuilder();
     builder.processing('xml', 'version="1.0" encoding="UTF-16"');
     
-    builder.element('Wordlist', nest: () {
+    builder.element('phon_data', nest: () {
       for (final entry in entries) {
-        builder.element('Entry', nest: () {
+        builder.element('data_form', nest: () {
           builder.element('Reference', nest: entry.reference);
           builder.element('Gloss', nest: entry.gloss);
           
@@ -78,12 +80,14 @@ class XmlImportService {
           }
           
           if (entry.pictureFilename != null && entry.pictureFilename!.isNotEmpty) {
-            builder.element('Picture', nest: entry.pictureFilename);
+            builder.element('Image_File', nest: entry.pictureFilename);
           }
         });
       }
     });
 
-    return builder.buildDocument().toXmlString(pretty: true, indent: '  ');
+    // Generate XML with LF endings, then convert to CRLF for Dekereke format
+    final xmlString = builder.buildDocument().toXmlString(pretty: true, indent: '  ');
+    return xmlString.replaceAll('\n', '\r\n');
   }
 }

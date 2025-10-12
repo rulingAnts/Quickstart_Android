@@ -149,26 +149,34 @@ The app follows Clean Architecture principles with:
 
 ### Dekereke XML Import Structure
 ```xml
-<Wordlist>
-  <Entry>
+<?xml version="1.0" encoding="utf-16"?>
+<phon_data>
+  <data_form>
     <Reference>0001</Reference>
     <Gloss>body</Gloss>
-    <Picture>optional_image.jpg</Picture>
-  </Entry>
-</Wordlist>
+    <Image_File>0001body.png</Image_File>
+  </data_form>
+</phon_data>
 ```
+
+**Format Notes:**
+- Encoding: UTF-16 with CRLF line endings
+- Root element: `<phon_data>`
+- Row elements: `<data_form>`
+- Image field: `<Image_File>` (also supports legacy `<Picture>` for compatibility)
 
 ### Dekereke XML Export Structure
 ```xml
-<Wordlist>
-  <Entry>
+<?xml version="1.0" encoding="utf-16"?>
+<phon_data>
+  <data_form>
     <Reference>0001</Reference>
     <Gloss>body</Gloss>
     <LocalWord>IPA transcription</LocalWord>
     <SoundFile>0001body.wav</SoundFile>
-    <Picture>optional_image.jpg</Picture>
-  </Entry>
-</Wordlist>
+    <Image_File>0001body.png</Image_File>
+  </data_form>
+</phon_data>
 ```
 
 ## Future Enhancements
