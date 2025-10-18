@@ -2,8 +2,6 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive_io.dart';
-import '../models/wordlist_entry.dart';
-import '../models/consent_record.dart';
 import 'xml_service.dart';
 import 'database_service.dart';
 
@@ -26,7 +24,8 @@ class ExportService {
     final entries = await _db.getAllWordlistEntries();
     final xmlContent = await _xmlService.exportDekerekeXml(entries);
     final xmlFile = File('${exportDir.path}/wordlist_data.xml');
-    await xmlFile.writeAsString(xmlContent, encoding: utf16);
+  // Write XML as UTF-8 (standard, widely compatible). Ensure XML header matches.
+  await xmlFile.writeAsString(xmlContent, encoding: utf8);
 
     // 2. Copy audio files
     final audioExportDir = Directory('${exportDir.path}/audio');

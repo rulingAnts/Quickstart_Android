@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:xml/xml.dart';
+import '../utils/logger.dart';
 import '../models/wordlist_entry.dart';
 import 'database_service.dart';
 
@@ -44,8 +45,8 @@ class XmlImportService {
 
         await _db.insertWordlistEntry(entry);
         importCount++;
-      } catch (e) {
-        print('Error parsing entry: $e');
+      } catch (e, st) {
+        Log.w('Error parsing entry', e, st);
         // Continue with next entry
       }
     }
@@ -60,8 +61,9 @@ class XmlImportService {
 
   /// Export to Dekereke XML format
   Future<String> exportDekerekeXml(List<WordlistEntry> entries) async {
-    final builder = XmlBuilder();
-    builder.processing('xml', 'version="1.0" encoding="UTF-16"');
+  final builder = XmlBuilder();
+  // Match the file write encoding (UTF-8)
+  builder.processing('xml', 'version="1.0" encoding="UTF-8"');
     
     builder.element('Wordlist', nest: () {
       for (final entry in entries) {

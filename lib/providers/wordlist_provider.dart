@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../utils/logger.dart';
 import '../models/wordlist_entry.dart';
 import '../services/database_service.dart';
 
@@ -25,8 +26,8 @@ class WordlistProvider extends ChangeNotifier {
     try {
       _entries = await _db.getAllWordlistEntries();
       _currentIndex = 0;
-    } catch (e) {
-      print('Error loading wordlist: $e');
+    } catch (e, st) {
+      Log.e('Error loading wordlist', e, st);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -41,8 +42,8 @@ class WordlistProvider extends ChangeNotifier {
         _entries[index] = entry;
         notifyListeners();
       }
-    } catch (e) {
-      print('Error updating entry: $e');
+    } catch (e, st) {
+      Log.e('Error updating entry', e, st);
     }
   }
 
