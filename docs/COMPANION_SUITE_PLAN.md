@@ -306,9 +306,11 @@ manifest like any other sync. Consent logs archive alongside the checkpoint.
 
 ## 7. Open questions (please answer / decide)
 
-1. **Which Dekereke build(s) do you and your colleague actually run** —
-   legacy 1.0.0.313, the Dec-2025 rewrite, or mixed? (Determines P0 scope
-   and which format we canonicalize first.)
+1. ~~Which Dekereke build(s)~~ **RESOLVED (Seth, 2026-07-02): the system
+   requires a pinned minimum Dekereke version, Windows only.** Remaining
+   sub-decision: pin the legacy 1.0.0.313 build or the Dec-2025 rewrite
+   (recommendation: the rewrite — actively developed, has built-in
+   recording; P0 verifies its format).
 2. **Hosting centralization:** OK to run the Worker + R2 on your Cloudflare
    account (colleagues enroll by invite, zero accounts for them), sharing
    the free tier with flextext? Or should each database owner deploy their
