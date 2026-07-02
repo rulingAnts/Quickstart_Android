@@ -163,6 +163,17 @@ its own branch, and keep every commit CI-green.
 
 ## Working agreements
 
+- **Use GitHub Actions/Workflows as much as possible for testing,
+  troubleshooting, and building** (Seth's explicit instruction): extend
+  `.github/workflows/` with jobs for `dekereke_core` tests, phone-app
+  tests/APKs, Windows desktop builds, and any troubleshooting harnesses.
+  CI runs and artifacts are the source of truth — Seth has limited
+  bandwidth and no local build tooling; a green workflow with a
+  downloadable artifact beats "works in my sandbox".
+- Seth will answer the open questions (plan §7) directly in-session —
+  record each answer immediately in this file's Decision log and mark the
+  question resolved in the plan, so no answer is ever lost to a short
+  session.
 - Seth interacts from his phone; sessions may be short — leave the repo
   self-explanatory after every push (update this file's Decision log and
   the plan's §7 as things resolve).
