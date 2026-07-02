@@ -124,8 +124,12 @@ All plan §7 questions are RESOLVED (Q1–Q7, 2026-07-02) — see the log above.
 6. Built-in recorder WAV spec; does it fill `SoundFile`; suffix-column support.
 7. Exact multi-file cell separator syntax.
 
-When Seth is ready, generate a test kit for him: a disposable TestDB with
-planted probe tags + a numbered click-by-click checklist.
+**Test kit ready** (2026-07-02): `test_data/p0_test_kit/` — disposable
+TestDB with planted probes, settings file, Update-From-File probe,
+audible test WAVs, and the numbered click-by-click
+[`CHECKLIST.md`](../test_data/p0_test_kit/CHECKLIST.md) covering items
+1–7 (~25 min on the VM). Regenerate with
+`dart tool/generate_p0_kit.dart` in `packages/dekereke_core`.
 
 ## Prioritized backlog for a cloud session (all doable in-repo)
 
