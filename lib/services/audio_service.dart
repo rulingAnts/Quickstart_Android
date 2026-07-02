@@ -46,6 +46,12 @@ class AudioService {
     return _start(entry.recordingFilename);
   }
 
+  /// Start recording a take under an explicit filename — task mode names
+  /// takes by the task's suffix assignment (`<base><suffix>.wav`).
+  Future<String> startRecordingAs(String filename) async {
+    return _start(filename);
+  }
+
   /// Start recording a verbal consent statement.
   Future<String> startConsentRecording() async {
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());

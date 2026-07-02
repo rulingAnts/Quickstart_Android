@@ -30,6 +30,11 @@ class WordlistEntry {
   /// not imported from a full Dekereke record.
   final String? xmlFieldsJson;
 
+  /// The record's DkSyncID from the task package's ID map (task mode only;
+  /// null for plain-XML imports). Results are keyed on this, never on
+  /// Reference.
+  final String? dkSyncId;
+
   WordlistEntry({
     this.id,
     required this.reference,
@@ -45,6 +50,7 @@ class WordlistEntry {
     this.recordedAt,
     this.isCompleted = false,
     this.xmlFieldsJson,
+    this.dkSyncId,
   });
 
   /// Original XML fields as an ordered (name, value) list, or empty if the
@@ -77,6 +83,7 @@ class WordlistEntry {
       'recorded_at': recordedAt?.toIso8601String(),
       'is_completed': isCompleted ? 1 : 0,
       'xml_fields': xmlFieldsJson,
+      'dk_sync_id': dkSyncId,
     };
   }
 
@@ -98,6 +105,7 @@ class WordlistEntry {
           : null,
       isCompleted: (map['is_completed'] as int? ?? 0) == 1,
       xmlFieldsJson: map['xml_fields'] as String?,
+      dkSyncId: map['dk_sync_id'] as String?,
     );
   }
 
@@ -138,6 +146,7 @@ class WordlistEntry {
     DateTime? recordedAt,
     bool? isCompleted,
     String? xmlFieldsJson,
+    String? dkSyncId,
   }) {
     return WordlistEntry(
       id: id ?? this.id,
@@ -154,6 +163,7 @@ class WordlistEntry {
       recordedAt: recordedAt ?? this.recordedAt,
       isCompleted: isCompleted ?? this.isCompleted,
       xmlFieldsJson: xmlFieldsJson ?? this.xmlFieldsJson,
+      dkSyncId: dkSyncId ?? this.dkSyncId,
     );
   }
 }

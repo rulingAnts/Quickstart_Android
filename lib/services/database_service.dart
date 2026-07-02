@@ -26,7 +26,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -48,12 +48,14 @@ class DatabaseService {
         audio_filename TEXT,
         recorded_at TEXT,
         is_completed INTEGER DEFAULT 0,
-        xml_fields TEXT
+        xml_fields TEXT,
+        dk_sync_id TEXT
       )
     ''');
     await db.execute(
       'CREATE UNIQUE INDEX idx_entries_reference ON wordlist_entries(reference)',
     );
+    await _createTaskTables(db);
 
     await db.execute('''
       CREATE TABLE consent_records (
@@ -104,6 +106,35 @@ class DatabaseService {
         )
       ''');
     }
+    if (oldVersion < 3) {
+      await db
+          .execute('ALTER TABLE wordlist_entries ADD COLUMN dk_sync_id TEXT');
+      await _createTaskTables(db);
+    }
+  }
+
+  /// Task mode (v3): collected cell values and recordings, keyed by the
+  /// record's DkSyncID and the writable column name (one value per cell —
+  /// exactly the `.dekresult` shape).
+  Future<void> _createTaskTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS task_values (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dk_sync_id TEXT NOT NULL,
+        column_name TEXT NOT NULL,
+        value TEXT NOT NULL,
+        UNIQUE(dk_sync_id, column_name)
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS task_recordings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        dk_sync_id TEXT NOT NULL,
+        column_name TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        UNIQUE(dk_sync_id, column_name)
+      )
+    ''');
   }
 
   // Wordlist Entry CRUD operations
@@ -225,6 +256,78 @@ class DatabaseService {
   Future<void> deleteAllWordlistEntries() async {
     final db = await database;
     await db.delete('wordlist_entries');
+  }
+
+  // Task mode: collected values and recordings (keyed by DkSyncID + column)
+
+  Future<void> setTaskValue(
+      String dkSyncId, String column, String value) async {
+    final db = await database;
+    await db.insert(
+      'task_values',
+      {'dk_sync_id': dkSyncId, 'column_name': column, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Removes a collected value (the user cleared the cell again).
+  Future<void> deleteTaskValue(String dkSyncId, String column) async {
+    final db = await database;
+    await db.delete(
+      'task_values',
+      where: 'dk_sync_id = ? AND column_name = ?',
+      whereArgs: [dkSyncId, column],
+    );
+  }
+
+  Future<void> setTaskRecording(
+      String dkSyncId, String column, String filename) async {
+    final db = await database;
+    await db.insert(
+      'task_recordings',
+      {'dk_sync_id': dkSyncId, 'column_name': column, 'filename': filename},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Collected text values for one record: column → value.
+  Future<Map<String, String>> getTaskValues(String dkSyncId) async {
+    final db = await database;
+    final rows = await db.query('task_values',
+        where: 'dk_sync_id = ?', whereArgs: [dkSyncId]);
+    return {
+      for (final row in rows)
+        row['column_name'] as String: row['value'] as String,
+    };
+  }
+
+  /// Collected recordings for one record: column → filename.
+  Future<Map<String, String>> getTaskRecordings(String dkSyncId) async {
+    final db = await database;
+    final rows = await db.query('task_recordings',
+        where: 'dk_sync_id = ?', whereArgs: [dkSyncId]);
+    return {
+      for (final row in rows)
+        row['column_name'] as String: row['filename'] as String,
+    };
+  }
+
+  /// All collected values as (dkSyncId, column, value) rows, in insertion
+  /// order — the `.dekresult` values list.
+  Future<List<Map<String, Object?>>> getAllTaskValues() async {
+    final db = await database;
+    return db.query('task_values', orderBy: 'id ASC');
+  }
+
+  Future<List<Map<String, Object?>>> getAllTaskRecordings() async {
+    final db = await database;
+    return db.query('task_recordings', orderBy: 'id ASC');
+  }
+
+  Future<void> clearTaskData() async {
+    final db = await database;
+    await db.delete('task_values');
+    await db.delete('task_recordings');
   }
 
   // Consent Record operations

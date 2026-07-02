@@ -11,7 +11,13 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  
+
+  # Companion Suite core: Dekereke XML codec, task package formats
+  # (.dektask/.dekresult), identity, merge. Pure Dart, shared with the
+  # future desktop Companion.
+  dekereke_core:
+    path: packages/dekereke_core
+
   # State Management
   provider: ^6.1.1
   
