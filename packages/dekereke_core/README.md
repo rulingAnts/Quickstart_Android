@@ -20,6 +20,9 @@ exercised by the `dekereke-core` CI job.
 | `merge/` | ✅ | Record+field three-way merge keyed on DkSyncID; conflicts carry plain-language data; deletions never implicit (plan §4.2b) |
 | `audio/` | ✅ | `filename → {sha256, bytes}` manifest, dedupe report, diff, 3-way merge with keep-both policy (plan §4.4) |
 | `task/` | ✅ | `.dektask` / `.dekresult` formats — spec in [`doc/task_packages.md`](doc/task_packages.md) (plan §5.2) |
+| `health/` | ✅ | Database health panel rules: duplicate/empty References, SoundFile mismatches, missing/orphaned audio, missing suffix files (plan §4.2) |
+| reference blocks | ✅ | Per-collaborator Reference number blocks + next-label assignment (D4) |
+| object diff | ✅ | `diffRecords`: record/field-level tracked changes for history summaries (never line-based) |
 
 ## Ground rules
 

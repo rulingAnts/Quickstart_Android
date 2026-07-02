@@ -9,7 +9,9 @@ export 'src/codec/db_codec.dart';
 export 'src/codec/encoding.dart';
 export 'src/codec/xml_writer.dart'
     show escapeXmlText, escapeXmlAttribute, serializeXmlNode;
+export 'src/health/health.dart';
 export 'src/identity/identity.dart';
+export 'src/identity/reference_blocks.dart';
 export 'src/merge/merge.dart';
 export 'src/model/database.dart';
 export 'src/model/sound_file.dart';
