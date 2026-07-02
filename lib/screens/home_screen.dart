@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/wordlist_provider.dart';
+import '../services/database_service.dart';
+import 'consent_screen.dart';
 import 'import_screen.dart';
 import 'elicitation_screen.dart';
 import 'export_screen.dart';
@@ -181,10 +183,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToElicitation(BuildContext context) {
+  /// Elicitation is gated on informed consent: the consent screen is shown
+  /// until the speaker has agreed (an MVP ethics requirement).
+  Future<void> _navigateToElicitation(BuildContext context) async {
+    final hasAssent = await DatabaseService.instance.hasAssent();
+    if (!context.mounted) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const ElicitationScreen()),
+      MaterialPageRoute(
+        builder: (context) =>
+            hasAssent ? const ElicitationScreen() : const ConsentScreen(),
+      ),
     );
   }
 

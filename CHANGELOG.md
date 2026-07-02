@@ -7,15 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Make the app actually work (2026-07)
+- **XML import rewritten for the real Dekereke format.** The importer now
+  reads the actual QWOM data file: UTF-16 little-endian encoding (with BOM
+  detection for UTF-16 LE/BE and UTF-8) and the `<phon_data>/<data_form>`
+  record structure. Previously the app expected a `<Wordlist>/<Entry>`
+  structure that real data files do not use, and read UTF-16 files as
+  UTF-8, so imports of real data failed entirely. The simplified structure
+  is still accepted for test files.
+- **Duplicate/failed inserts fixed.** Entries were inserted with an explicit
+  `id: 0` for every row, breaking SQLite auto-increment. Ids are now
+  auto-assigned, references are enforced UNIQUE at the schema level
+  (v2 migration included), imports run in a single transaction, and
+  duplicate references within a file are skipped with a report.
+- **Compile error fixed.** The export service referenced a nonexistent
+  `utf16` codec; export now writes real UTF-16 LE bytes with BOM.
+- **Export ZIP layout fixed.** Contents are no longer nested inside an
+  `export_temp/` folder; stale export archives are cleaned up; the consent
+  log is always included.
+- **Elicitation session resume.** Revisiting a completed word now shows its
+  saved transcription and recording (previously fields were blank);
+  sessions resume at the first incomplete word; recordings in progress are
+  stopped on save and discarded on navigation.
+- **Recording filenames.** Recordings use the wordlist-assigned
+  `<SoundFile>` name (e.g. `0002skin.wav`), with sanitized fallback names
+  for glosses containing spaces or punctuation.
+- **Android project made buildable.** The android/ scaffold was missing the
+  Gradle wrapper, resources, and launch themes; it has been regenerated
+  (minSdk 23 for the audio recorder) and CI now builds APK artifacts.
+  `record` upgraded to 6.x and `file_picker` to 8.x — both 5.x/6.x versions
+  shipped plugin code that no longer compiles in Android release builds.
+- **Recording safety (adversarial review findings).** New takes are recorded
+  into `audio/tmp/` and only moved over the archived WAV when the entry is
+  saved — previously a re-record overwrote the saved recording immediately
+  and cancelling deleted it outright (permanent data loss from one stray
+  tap). Save & Next is double-tap-proof and no longer advances when the
+  database write or file move fails. Exports include only WAVs referenced
+  by current entries/consent records, and a new export archive is fully
+  built before the previous one is deleted.
+
+### Added
+- Consent screen (written + optional verbal recording) gating elicitation,
+  with persistent consent log — an MVP ethics requirement.
+- Merge-on-import option that updates the wordlist while preserving
+  collected transcriptions and recordings.
+- Indonesian and Tok Pisin gloss display on the elicitation screen.
+- Picture display when researcher-supplied images exist under
+  `<app documents>/pictures/`.
+- Comprehensive test suite (XML parsing/round-trip, UTF-16 handling,
+  database migration, duplicate prevention, provider logic, widget smoke
+  tests) runnable headless in CI.
+- GitHub Actions workflow: analyze, test, and APK artifact builds.
+
 ### Planned Features
-- Consent screen UI with verbal/written options
 - LIFT XML export format support
-- Image display for wordlist entries with Picture field
 - Cloud sync capabilities
 - Custom font integration (Charis SIL, Doulos SIL)
 - Enhanced keyboard support for IPA input
 - Data validation and quality checks
 - Batch import/export operations
+- Configurable consent text (per-language, via bundling wizard)
 
 ## [1.0.0] - 2024-10-12
 

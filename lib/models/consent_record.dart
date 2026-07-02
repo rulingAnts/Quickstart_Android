@@ -1,6 +1,7 @@
 /// Represents the consent information logged for ethical data collection
 class ConsentRecord {
-  final int id;
+  /// Database row id; null until inserted so SQLite can auto-assign one.
+  final int? id;
   final DateTime timestamp;
   final String deviceId;
   final ConsentType type;
@@ -8,7 +9,7 @@ class ConsentRecord {
   final String? verbalConsentFilename; // If verbal consent was recorded
 
   ConsentRecord({
-    required this.id,
+    this.id,
     required this.timestamp,
     required this.deviceId,
     required this.type,
@@ -18,7 +19,7 @@ class ConsentRecord {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'timestamp': timestamp.toIso8601String(),
       'device_id': deviceId,
       'type': type.toString().split('.').last,
@@ -29,7 +30,7 @@ class ConsentRecord {
 
   factory ConsentRecord.fromMap(Map<String, dynamic> map) {
     return ConsentRecord(
-      id: map['id'] as int,
+      id: map['id'] as int?,
       timestamp: DateTime.parse(map['timestamp'] as String),
       deviceId: map['device_id'] as String,
       type: ConsentType.values.firstWhere(

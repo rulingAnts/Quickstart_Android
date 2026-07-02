@@ -1,54 +1,101 @@
-<?xml version="1.0" encoding="UTF-16"?>
-<!-- 
-  Sample Dekereke XML Wordlist Format
-  This is an example file showing the expected structure for import.
-  
-  Note: This file is for TESTING/DEVELOPMENT purposes only.
-  Real wordlist data should be acquired from: https://github.com/rulingAnts/QWOM_Data
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<!--
+  Sample Dekereke XML wordlist for TESTING/DEVELOPMENT only.
+
+  This mirrors the structure of the real QWOM data file
+  (https://github.com/rulingAnts/QWOM_Data), which uses a <phon_data> root
+  with one <data_form> record per word. Real Dekereke files are UTF-16
+  little-endian; the app accepts UTF-8 files like this one as well.
 -->
-<Wordlist>
-  <Entry>
-    <Reference>0001</Reference>
-    <Gloss>body</Gloss>
-    <Picture>body.jpg</Picture>
-  </Entry>
-  <Entry>
-    <Reference>0002</Reference>
-    <Gloss>head</Gloss>
-    <Picture>head.jpg</Picture>
-  </Entry>
-  <Entry>
-    <Reference>0003</Reference>
-    <Gloss>hair</Gloss>
-  </Entry>
-  <Entry>
-    <Reference>0004</Reference>
-    <Gloss>eye</Gloss>
-    <Picture>eye.jpg</Picture>
-  </Entry>
-  <Entry>
-    <Reference>0005</Reference>
-    <Gloss>ear</Gloss>
-  </Entry>
-  <Entry>
-    <Reference>0006</Reference>
-    <Gloss>nose</Gloss>
-    <Picture>nose.jpg</Picture>
-  </Entry>
-  <Entry>
-    <Reference>0007</Reference>
-    <Gloss>mouth</Gloss>
-  </Entry>
-  <Entry>
-    <Reference>0008</Reference>
-    <Gloss>tooth</Gloss>
-  </Entry>
-  <Entry>
-    <Reference>0009</Reference>
-    <Gloss>tongue</Gloss>
-  </Entry>
-  <Entry>
-    <Reference>0010</Reference>
-    <Gloss>neck</Gloss>
-  </Entry>
-</Wordlist>
+<phon_data>
+	<data_form>
+		<Reference>0001</Reference>
+		<CAWL>1</CAWL>
+		<InPictureDictionary>X</InPictureDictionary>
+		<Picture />
+		<Category>N</Category>
+		<Gloss>body</Gloss>
+		<SoundFile>0001body.wav</SoundFile>
+		<Image_File>0001body.png</Image_File>
+		<Instructions />
+		<GlossTokPisin>bodi</GlossTokPisin>
+		<GlossIndonesian>tubuh, badan</GlossIndonesian>
+		<Phonetic />
+		<SemanticDomain>Body parts</SemanticDomain>
+		<Notes />
+		<InstructionsIndonesian />
+		<InstructionsTokPisin />
+	</data_form>
+	<data_form>
+		<Reference>0002</Reference>
+		<CAWL>2</CAWL>
+		<InPictureDictionary />
+		<Picture />
+		<Category>N</Category>
+		<Gloss>skin (human)</Gloss>
+		<SoundFile>0002skin.wav</SoundFile>
+		<Image_File />
+		<Instructions />
+		<GlossTokPisin>skin</GlossTokPisin>
+		<GlossIndonesian>kulit</GlossIndonesian>
+		<Phonetic />
+		<SemanticDomain>Body parts</SemanticDomain>
+		<Notes />
+		<InstructionsIndonesian />
+		<InstructionsTokPisin />
+	</data_form>
+	<data_form>
+		<Reference>0003</Reference>
+		<CAWL>3</CAWL>
+		<InPictureDictionary>X</InPictureDictionary>
+		<Picture />
+		<Category>N</Category>
+		<Gloss>head</Gloss>
+		<SoundFile>0003head.wav</SoundFile>
+		<Image_File>0003head.png</Image_File>
+		<Instructions />
+		<GlossTokPisin>het</GlossTokPisin>
+		<GlossIndonesian>kepala</GlossIndonesian>
+		<Phonetic />
+		<SemanticDomain>Body parts</SemanticDomain>
+		<Notes />
+		<InstructionsIndonesian />
+		<InstructionsTokPisin />
+	</data_form>
+	<data_form>
+		<Reference>0004</Reference>
+		<CAWL>4</CAWL>
+		<InPictureDictionary>X</InPictureDictionary>
+		<Picture />
+		<Category>N</Category>
+		<Gloss>hair (of head)</Gloss>
+		<SoundFile>0004hair.wav</SoundFile>
+		<Image_File>0004hair.png</Image_File>
+		<Instructions />
+		<GlossTokPisin>gras bilong het</GlossTokPisin>
+		<GlossIndonesian>rambut</GlossIndonesian>
+		<Phonetic />
+		<SemanticDomain>Body parts</SemanticDomain>
+		<Notes />
+		<InstructionsIndonesian />
+		<InstructionsTokPisin />
+	</data_form>
+	<data_form>
+		<Reference>0005</Reference>
+		<CAWL>5</CAWL>
+		<InPictureDictionary>X</InPictureDictionary>
+		<Picture />
+		<Category>N</Category>
+		<Gloss>eye</Gloss>
+		<SoundFile>0005eye.wav</SoundFile>
+		<Image_File>0005eye.png</Image_File>
+		<Instructions />
+		<GlossTokPisin>ai</GlossTokPisin>
+		<GlossIndonesian>mata</GlossIndonesian>
+		<Phonetic />
+		<SemanticDomain>Body parts</SemanticDomain>
+		<Notes />
+		<InstructionsIndonesian />
+		<InstructionsTokPisin />
+	</data_form>
+</phon_data>
