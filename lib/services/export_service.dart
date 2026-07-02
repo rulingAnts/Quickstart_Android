@@ -30,34 +30,47 @@ class ExportService {
     final directory = await _baseDirectory;
     final exportDir = Directory('${directory.path}/export_temp');
 
-    // Clean up any previous export temp data and stale export archives.
+    // Clean up any previous export temp data. Old export archives are only
+    // removed after the new one is fully built, so a failed export never
+    // destroys the last good backup.
     if (await exportDir.exists()) {
       await exportDir.delete(recursive: true);
     }
     await exportDir.create(recursive: true);
-    await _deleteOldExports(directory);
+
+    final entries = await _db.getAllWordlistEntries();
+    final consentRecords = await _db.getAllConsentRecords();
 
     // 1. Dekereke XML (UTF-16 LE with BOM, as Dekereke expects).
-    final entries = await _db.getAllWordlistEntries();
     final xmlContent = _xmlService.exportDekerekeXml(entries);
     final xmlFile = File('${exportDir.path}/wordlist_data.xml');
     await xmlFile.writeAsBytes(XmlImportService.encodeUtf16Le(xmlContent));
 
-    // 2. Audio recordings.
+    // 2. Audio recordings — only files the current data actually
+    // references, so recordings from a previously replaced wordlist can't
+    // contaminate the archive.
+    final referenced = <String>{
+      for (final e in entries)
+        if (e.audioFilename != null && e.audioFilename!.isNotEmpty)
+          e.audioFilename!,
+      for (final r in consentRecords)
+        if (r.verbalConsentFilename != null) r.verbalConsentFilename!,
+    };
     final audioExportDir = Directory('${exportDir.path}/audio');
     await audioExportDir.create();
     final audioSourceDir = Directory('${directory.path}/audio');
     if (await audioSourceDir.exists()) {
       await for (final file in audioSourceDir.list()) {
-        if (file is File && file.path.toLowerCase().endsWith('.wav')) {
+        if (file is File) {
           final filename = file.uri.pathSegments.last;
-          await file.copy('${audioExportDir.path}/$filename');
+          if (referenced.contains(filename)) {
+            await file.copy('${audioExportDir.path}/$filename');
+          }
         }
       }
     }
 
     // 3. Consent log — always included, per the ethics requirements.
-    final consentRecords = await _db.getAllConsentRecords();
     final consentLog = {
       'consent_records': consentRecords.map((r) => r.toJson()).toList(),
     };
@@ -86,24 +99,34 @@ Consent Records: ${consentRecords.length}
     await readmeFile.writeAsString(readmeContent);
 
     // 5. Zip it up (contents at the archive root, not nested in a folder).
+    // Build under a temporary name, then swap: earlier exports survive any
+    // failure up to this point.
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
     final zipFilePath = '${directory.path}/wordlist_export_$timestamp.zip';
+    final buildingPath = '$zipFilePath.building';
 
     final encoder = ZipFileEncoder();
-    encoder.create(zipFilePath);
+    encoder.create(buildingPath);
     await encoder.addDirectory(exportDir, includeDirName: false);
     encoder.close();
+
+    await _deleteOldExports(directory, except: buildingPath);
+    await File(buildingPath).rename(zipFilePath);
 
     await exportDir.delete(recursive: true);
 
     return zipFilePath;
   }
 
-  Future<void> _deleteOldExports(Directory directory) async {
+  /// Deletes finished exports and stale `.building` leftovers from crashed
+  /// runs, sparing the archive currently being built.
+  Future<void> _deleteOldExports(Directory directory,
+      {String? except}) async {
     await for (final file in directory.list()) {
-      if (file is File) {
+      if (file is File && file.path != except) {
         final name = file.uri.pathSegments.last;
-        if (name.startsWith('wordlist_export_') && name.endsWith('.zip')) {
+        if (name.startsWith('wordlist_export_') &&
+            (name.endsWith('.zip') || name.endsWith('.zip.building'))) {
           await file.delete();
         }
       }

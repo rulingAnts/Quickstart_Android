@@ -61,11 +61,19 @@ void main() {
       response: ConsentResponse.assent,
     ));
 
-    // Simulate a recorded WAV file.
+    // Simulate a recorded WAV file, plus leftovers that must NOT be
+    // exported: a recording from a replaced wordlist and an unsaved take
+    // in the temp directory.
     final audioDir = Directory('${tempDir.path}/audio');
     await audioDir.create(recursive: true);
     await File('${audioDir.path}/0001body.wav')
         .writeAsBytes(List.filled(64, 1));
+    await File('${audioDir.path}/9999stale.wav')
+        .writeAsBytes(List.filled(64, 2));
+    final tmpTakes = Directory('${audioDir.path}/tmp');
+    await tmpTakes.create();
+    await File('${tmpTakes.path}/0001body.wav')
+        .writeAsBytes(List.filled(64, 3));
 
     final service = ExportService(baseDirectoryOverride: tempDir);
     final zipPath = await service.exportData();
@@ -82,6 +90,10 @@ void main() {
     expect(names, contains('consent_log.json'));
     expect(names, contains('README.txt'));
     expect(names.any((n) => n.startsWith('export_temp')), false);
+
+    // Unreferenced recordings and unsaved temp takes stay out.
+    expect(names.any((n) => n.contains('9999stale')), false);
+    expect(names.any((n) => n.contains('tmp')), false);
 
     // The XML is UTF-16 LE with BOM and carries the collected data.
     final xmlBytes = archive.files

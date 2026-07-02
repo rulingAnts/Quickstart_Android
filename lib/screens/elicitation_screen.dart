@@ -20,6 +20,13 @@ class _ElicitationScreenState extends State<ElicitationScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
+  void initState() {
+    super.initState();
+    // Discard unsaved takes left over from a crash or force-close.
+    _audioService.cleanTempRecordings();
+  }
+
+  @override
   void dispose() {
     _audioService.dispose();
     _audioPlayer.dispose();
@@ -106,8 +113,10 @@ class _EntryEditorState extends State<_EntryEditor> {
 
   bool _isRecording = false;
   bool _isSaving = false;
+  bool _recorderBusy = false;
 
-  /// Audio recorded in this visit to the entry (not yet saved).
+  /// Audio recorded in this visit to the entry, sitting in the temp
+  /// directory until saved (never overwrites the archived recording).
   String? _newAudioFilename;
 
   /// Audio previously saved for this entry, shown for playback.
@@ -319,10 +328,16 @@ class _EntryEditorState extends State<_EntryEditor> {
   }
 
   Future<void> _toggleRecording() async {
-    if (_isRecording) {
-      await _stopRecording();
-    } else {
-      await _startRecording();
+    if (_recorderBusy) return;
+    _recorderBusy = true;
+    try {
+      if (_isRecording) {
+        await _stopRecording();
+      } else {
+        await _startRecording();
+      }
+    } finally {
+      _recorderBusy = false;
     }
   }
 
@@ -364,7 +379,11 @@ class _EntryEditorState extends State<_EntryEditor> {
     if (filename == null) return;
 
     try {
-      final filePath = await widget.audioService.getAudioFilePath(filename);
+      // An unsaved take lives in the temp directory; saved recordings in
+      // the main audio directory.
+      final filePath = _newAudioFilename != null
+          ? await widget.audioService.getTempAudioFilePath(filename)
+          : await widget.audioService.getAudioFilePath(filename);
       if (!await File(filePath).exists()) {
         throw Exception('Audio file not found');
       }
@@ -380,39 +399,77 @@ class _EntryEditorState extends State<_EntryEditor> {
   }
 
   Future<void> _saveAndNext() async {
-    // Finish an in-progress recording so it is included in the save.
-    if (_isRecording) {
-      await _stopRecording();
-    }
-    if (!mounted) return;
-
-    final transcription = _transcriptionController.text.trim();
-
-    if (transcription.isEmpty && _playableAudio == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add a transcription or recording'),
-        ),
-      );
-      return;
-    }
-
+    // Set synchronously so a double-tap cannot enter twice and double-save
+    // or skip an entry.
+    if (_isSaving) return;
     setState(() => _isSaving = true);
 
-    await widget.provider.markCurrentAsCompleted(
-      transcription: transcription,
-      audioFilename: _newAudioFilename,
-    );
+    var advanced = false;
+    try {
+      // Finish an in-progress recording so it is included in the save.
+      if (_isRecording) {
+        await _stopRecording();
+        if (!mounted) return;
+      }
 
-    if (!mounted) return;
+      final transcription = _transcriptionController.text.trim();
 
-    if (widget.provider.hasNext) {
-      widget.provider.nextEntry();
-    } else {
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('All entries completed!')),
+      if (transcription.isEmpty && _playableAudio == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please add a transcription or recording'),
+          ),
+        );
+        return;
+      }
+
+      // Only now does a new take replace the archived recording.
+      final newTake = _newAudioFilename;
+      if (newTake != null) {
+        final finalized = await widget.audioService.finalizeRecording(newTake);
+        if (!mounted) return;
+        if (!finalized) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not save the recording — please try again'),
+            ),
+          );
+          return;
+        }
+        setState(() {
+          _savedAudioFilename = newTake;
+          _newAudioFilename = null;
+        });
+      }
+
+      final saved = await widget.provider.markCurrentAsCompleted(
+        transcription: transcription,
+        audioFilename: newTake ?? _savedAudioFilename,
       );
+      if (!mounted) return;
+      if (!saved) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Saving failed — please try again'),
+          ),
+        );
+        return;
+      }
+
+      if (widget.provider.hasNext) {
+        advanced = true;
+        widget.provider.nextEntry();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All entries completed!')),
+        );
+      }
+    } finally {
+      // Keep the button disabled when we advanced (this editor is being
+      // replaced); re-enable it on validation/save failure or last entry.
+      if (mounted && !advanced && _isSaving) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 

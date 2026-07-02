@@ -181,15 +181,23 @@ class _ConsentScreenState extends State<ConsentScreen> {
     setState(() => _isSaving = true);
 
     try {
+      // Recordings sit in the temp directory until committed; keep the
+      // verbal consent only when a response is actually recorded.
+      var verbalFilename = _verbalConsentFilename;
+      if (verbalFilename != null &&
+          !await _audioService.finalizeRecording(verbalFilename)) {
+        verbalFilename = null;
+      }
+
       final deviceId = await _db.getOrCreateDeviceId();
       await _db.insertConsentRecord(ConsentRecord(
         timestamp: DateTime.now(),
         deviceId: deviceId,
-        type: _verbalConsentFilename != null
+        type: verbalFilename != null
             ? ConsentType.verbal
             : ConsentType.written,
         response: response,
-        verbalConsentFilename: _verbalConsentFilename,
+        verbalConsentFilename: verbalFilename,
       ));
     } catch (e) {
       if (mounted) {

@@ -5,6 +5,10 @@ import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/wordlist_entry.dart';
 
+/// Records elicitation audio safely: new takes are written to a temporary
+/// directory (`audio/tmp/`) and only moved over the archived WAV in
+/// `audio/` when the entry is saved. Cancelling or navigating away discards
+/// the temporary take and can never touch a previously saved recording.
 class AudioService {
   final AudioRecorder _recorder = AudioRecorder();
   String? _currentRecordingPath;
@@ -24,9 +28,20 @@ class AudioService {
     return audioDir;
   }
 
-  /// Start recording audio for a wordlist entry. Returns the filename the
-  /// recording will be saved as (e.g. "0001body.wav" — the wordlist's
-  /// assigned `<SoundFile>` name when available).
+  /// Where in-progress (unsaved) takes live. Kept inside audio/ but in a
+  /// subdirectory so exports (which list only files in audio/) skip it.
+  Future<Directory> _tempDirectory() async {
+    final audioDir = await _audioDirectory();
+    final tempDir = Directory('${audioDir.path}/tmp');
+    if (!await tempDir.exists()) {
+      await tempDir.create(recursive: true);
+    }
+    return tempDir;
+  }
+
+  /// Start recording a take for a wordlist entry. Returns the filename the
+  /// take will be saved as once finalized (e.g. "0001body.wav" — the
+  /// wordlist's assigned `<SoundFile>` name when available).
   Future<String> startRecording(WordlistEntry entry) async {
     return _start(entry.recordingFilename);
   }
@@ -42,8 +57,8 @@ class AudioService {
       throw Exception('Microphone permission denied');
     }
 
-    final audioDir = await _audioDirectory();
-    _currentRecordingPath = '${audioDir.path}/$filename';
+    final tempDir = await _tempDirectory();
+    _currentRecordingPath = '${tempDir.path}/$filename';
 
     // 16-bit PCM WAV, 44.1 kHz mono, per the export spec.
     await _recorder.start(
@@ -58,8 +73,9 @@ class AudioService {
     return filename;
   }
 
-  /// Stop recording. Returns the saved filename, or null if nothing was
-  /// recorded or the file was not written.
+  /// Stop recording. Returns the take's filename (still in the temp
+  /// directory — call [finalizeRecording] to keep it), or null if nothing
+  /// was recorded or the file was not written.
   Future<String?> stopRecording() async {
     final path = await _recorder.stop() ?? _currentRecordingPath;
     _currentRecordingPath = null;
@@ -69,12 +85,41 @@ class AudioService {
     return file.uri.pathSegments.last;
   }
 
+  /// Move a stopped take from the temp directory over the archived
+  /// recording. Only called from save paths, so an archived WAV is never
+  /// touched until the user commits. Returns true on success (or when the
+  /// take was already finalized, so retries after a failed DB save work).
+  Future<bool> finalizeRecording(String filename) async {
+    final tempDir = await _tempDirectory();
+    final audioDir = await _audioDirectory();
+    final source = File('${tempDir.path}/$filename');
+    final destination = File('${audioDir.path}/$filename');
+
+    if (!await source.exists()) {
+      return destination.exists();
+    }
+    try {
+      await source.rename(destination.path);
+      return true;
+    } on FileSystemException {
+      // Cross-device fallback; same filesystem in practice.
+      try {
+        await source.copy(destination.path);
+        await source.delete();
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+  }
+
   /// Check if currently recording
   Future<bool> isRecording() async {
     return await _recorder.isRecording();
   }
 
-  /// Cancel and discard the current recording.
+  /// Cancel and discard the current take. Only the temp file is deleted;
+  /// archived recordings are never affected.
   Future<void> cancelRecording() async {
     final path = _currentRecordingPath;
     _currentRecordingPath = null;
@@ -91,18 +136,38 @@ class AudioService {
     }
   }
 
+  /// Remove leftover unsaved takes (e.g. after a crash or force-close).
+  Future<void> cleanTempRecordings() async {
+    final tempDir = await _tempDirectory();
+    await for (final file in tempDir.list()) {
+      if (file is File) {
+        try {
+          await file.delete();
+        } catch (_) {
+          // Best effort; stale files are harmless.
+        }
+      }
+    }
+  }
+
   /// Dispose the recorder
   Future<void> dispose() async {
     await _recorder.dispose();
   }
 
-  /// Get the full path to an audio file by filename
+  /// Full path to an archived (saved) recording.
   Future<String> getAudioFilePath(String filename) async {
     final audioDir = await _audioDirectory();
     return '${audioDir.path}/$filename';
   }
 
-  /// Whether a recording exists for [filename].
+  /// Full path to an unsaved take in the temp directory.
+  Future<String> getTempAudioFilePath(String filename) async {
+    final tempDir = await _tempDirectory();
+    return '${tempDir.path}/$filename';
+  }
+
+  /// Whether an archived recording exists for [filename].
   Future<bool> audioFileExists(String filename) async {
     return File(await getAudioFilePath(filename)).exists();
   }

@@ -249,8 +249,17 @@ class XmlImportService {
       }
     });
 
-    final xml =
-        builder.buildDocument().toXmlString(pretty: true, indent: '\t');
+    // preserveWhitespace: the pretty-printer would otherwise collapse
+    // whitespace runs INSIDE text values (e.g. an IPA transcription with a
+    // meaningful double space), silently corrupting data.
+    final xml = builder.buildDocument().toXmlString(
+          pretty: true,
+          indent: '\t',
+          preserveWhitespace: (node) =>
+              node is XmlElement &&
+              node.children.any(
+                  (child) => child is XmlText && child.value.trim().isNotEmpty),
+        );
     // Dekereke writes CRLF line endings.
     return xml.replaceAll('\n', '\r\n');
   }

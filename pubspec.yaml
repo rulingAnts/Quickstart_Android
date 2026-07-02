@@ -24,7 +24,6 @@ dependencies:
   xml: ^6.4.2
   
   # File Operations
-  file_picker: ^6.1.1
   archive: ^3.4.9
   
   # Audio Recording & Playback
@@ -37,6 +36,7 @@ dependencies:
   # UI Components
   intl: ^0.20.2
   share_plus: ^10.1.2
+  file_picker: ^8.0.0
 
 dev_dependencies:
   flutter_test:

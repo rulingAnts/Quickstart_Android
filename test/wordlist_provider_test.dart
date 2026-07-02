@@ -88,10 +88,11 @@ void main() {
       final provider = WordlistProvider();
       await provider.loadWordlist();
 
-      await provider.markCurrentAsCompleted(
+      final saved = await provider.markCurrentAsCompleted(
         transcription: 'bɔdi',
         audioFilename: '0001body.wav',
       );
+      expect(saved, true);
 
       var stored =
           (await DatabaseService.instance.getAllWordlistEntries()).single;

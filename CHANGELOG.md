@@ -35,6 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Android project made buildable.** The android/ scaffold was missing the
   Gradle wrapper, resources, and launch themes; it has been regenerated
   (minSdk 23 for the audio recorder) and CI now builds APK artifacts.
+  `record` upgraded to 6.x and `file_picker` to 8.x — both 5.x/6.x versions
+  shipped plugin code that no longer compiles in Android release builds.
+- **Recording safety (adversarial review findings).** New takes are recorded
+  into `audio/tmp/` and only moved over the archived WAV when the entry is
+  saved — previously a re-record overwrote the saved recording immediately
+  and cancelling deleted it outright (permanent data loss from one stray
+  tap). Save & Next is double-tap-proof and no longer advances when the
+  database write or file move fails. Exports include only WAVs referenced
+  by current entries/consent records, and a new export archive is fully
+  built before the previous one is deleted.
 
 ### Added
 - Consent screen (written + optional verbal recording) gating elicitation,

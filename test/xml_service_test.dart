@@ -287,6 +287,18 @@ void main() {
       expect(reparsed.entries.single.soundFile, '0001body.wav');
     });
 
+    test('internal whitespace in text values survives pretty-printing', () {
+      final entry = WordlistEntry(
+        reference: '0001',
+        gloss: 'body',
+        localTranscription: 'bɔ  di baʔ', // double space is meaningful
+        isCompleted: true,
+      );
+      final exported = XmlImportService().exportDekerekeXml([entry]);
+      final reparsed = XmlImportService.parseWordlistXml(exported);
+      expect(reparsed.entries.single.localTranscription, 'bɔ  di baʔ');
+    });
+
     test('export bytes are valid UTF-16 for IPA transcriptions', () {
       final entry = WordlistEntry(
         reference: '0001',

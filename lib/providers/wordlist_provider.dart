@@ -63,7 +63,9 @@ class WordlistProvider extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> updateEntry(WordlistEntry entry) async {
+  /// Persists [entry]. Returns false (and sets [lastError]) when the write
+  /// fails, so callers can avoid advancing past an unsaved word.
+  Future<bool> updateEntry(WordlistEntry entry) async {
     try {
       await _db.updateWordlistEntry(entry);
       final index = _entries.indexWhere((e) => e.id == entry.id);
@@ -71,10 +73,12 @@ class WordlistProvider extends ChangeNotifier {
         _entries[index] = entry;
         _notify();
       }
+      return true;
     } catch (e) {
       _lastError = 'Error updating entry: $e';
       debugPrint(_lastError);
       _notify();
+      return false;
     }
   }
 
@@ -104,12 +108,13 @@ class WordlistProvider extends ChangeNotifier {
 
   /// Saves the current entry's collected data. Pass the audio filename that
   /// should be stored; existing audio is kept when [audioFilename] is null.
-  Future<void> markCurrentAsCompleted({
+  /// Returns false when the write fails.
+  Future<bool> markCurrentAsCompleted({
     required String transcription,
     String? audioFilename,
   }) async {
     final entry = currentEntry;
-    if (entry == null) return;
+    if (entry == null) return false;
 
     final updatedEntry = entry.copyWith(
       localTranscription: transcription,
@@ -118,7 +123,7 @@ class WordlistProvider extends ChangeNotifier {
       isCompleted: true,
     );
 
-    await updateEntry(updatedEntry);
+    return updateEntry(updatedEntry);
   }
 
   Future<void> clearWordlist() async {
