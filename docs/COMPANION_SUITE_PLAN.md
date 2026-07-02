@@ -119,13 +119,42 @@ display profiles) are versioned as a canonical `settings.shared.xml`; each
 machine's real `DkUserSettings.xml` is generated locally = shared part +
 local paths (sound folder, Praat). Local paths never sync.
 
-### 4.2 Merge (the heart)
+### 4.2 Identity & integrity (the Reference problem)
 
-Record-level 3-way merge keyed on `<Reference>`, then field-level within a
-record:
+`<Reference>` is a design flaw as a key: Dekereke enforces neither
+uniqueness nor presence, and it doubles as the audio-naming convention.
+The Companion separates **identity** from **label**:
 
-- Added records: kept from both sides (Reference collision on *new* records
-  → see numbering policy below).
+- **`DkSyncID` hidden column = identity.** A short random ID (~12 chars)
+  added to every record at workspace adoption and minted at checkpoint time
+  for records created anywhere (Dekereke supports arbitrary custom columns;
+  the shipped settings hide it via `hidden_columns`, as the real
+  Barnabas-DkUserSettings.xml already does for other columns). Merge and
+  task matching key on `DkSyncID`. Consequences: duplicate References merge
+  losslessly (flagged, not fatal), missing References still sync,
+  renumbering is just a field edit, and phone results match their exact
+  source records. If a hand edit strips an ID, the next checkpoint re-mints
+  one (worst case the record looks new; recoverable from history).
+- **Database health panel = Reference lint.** Audio naming still leans on
+  Reference, so the Companion continuously flags: duplicate References,
+  empty References, SoundFile↔Reference mismatches, orphaned audio files,
+  and missing suffix files — each with a guided fix, including a
+  **linkage-preserving renumber** (updates Reference + renames base WAV +
+  all suffix WAVs + `<SoundFile>` atomically), which Dekereke lacks.
+- **Reserved Reference blocks per collaborator** prevent two machines from
+  minting the same new Reference; auto-assignment picks the next free
+  number in the local block.
+- P0 must verify Dekereke's grid/save/Update-From-File preserve an unknown
+  `DkSyncID` column (documented as first-class custom columns; verify, not
+  guess).
+
+### 4.2b Merge (the heart)
+
+Record-level 3-way merge keyed on `DkSyncID` (Reference is display-only in
+merge), then field-level within a record:
+
+- Added records: kept from both sides (identity is `DkSyncID`, so
+  same-Reference additions coexist and get flagged by the health panel).
 - Field edited on one side only → auto-merge.
 - Same field edited identically → auto-merge.
 - Same field, different values → **conflict**, shown in plain language:
@@ -138,12 +167,14 @@ record:
 - Sync = always pull → merge → checkpoint → push (no rebase/branch concepts
   surface anywhere; "branching" exists only implicitly and merges away).
 
-**New-Reference collisions:** two colleagues adding word 1067 simultaneously
-is the one unavoidable coordination problem (Reference is the only key).
-Proposal: the repo config reserves a Reference block per collaborator
-(e.g. Seth 1000–4999, Chris 5000–8999) which Companion enforces when it
-detects new records; alternative is auto-renumber-on-merge with a mapping
-report. **Decision needed (Q4).**
+**Scope note (multi-writer, heterogeneous):** the sync graph is N full
+Dekereke databases (unmodified Windows app, multiple researchers as
+symmetric peers) + M phone instances (constrained satellites for
+low-literacy speakers — subset of records, whitelisted fields, leased
+writable columns; they never see sync or merge vocabulary). All merging
+happens researcher-side in the Companion. Writable-column leases live in
+the synced repo state, so two researchers cannot unknowingly delegate the
+same column to different speakers.
 
 ### 4.3 History & backups UX
 
@@ -266,9 +297,10 @@ manifest like any other sync. Consent logs archive alongside the checkpoint.
    own from a template?
 3. **FLAC-at-rest tradeoff:** cloud/transfer in FLAC, but every machine
    keeps the full WAV working folder (disk is cheap locally). Acceptable?
-4. **New-Reference policy:** reserved reference blocks per collaborator
-   (simple, visible) vs auto-renumber on merge (invisible but rewrites
-   references others may have noted on paper). Preference?
+4. **Reference block sizes:** identity is handled by `DkSyncID` (§4.2), but
+   new-Reference *labels* still auto-assign from per-collaborator blocks —
+   any preference on block layout (e.g. 1000-per-person), or should the
+   Companion just pick?
 5. **Where is the master audio folder today** — the Google Drive
    "Core Phonology DB/audio" copy, the dekereke-sync path in the settings
    file, or elsewhere? (Seeding + dedupe starts from the authoritative one.)
