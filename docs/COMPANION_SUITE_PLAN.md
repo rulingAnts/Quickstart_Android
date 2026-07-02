@@ -192,6 +192,15 @@ merge), then field-level within a record:
   next sync.
 - Sync = always pull → merge → checkpoint → push (no rebase/branch concepts
   surface anywhere; "branching" exists only implicitly and merges away).
+- **Object-level, never line-level:** merge, diff and tracked changes all
+  operate on the parsed record/field model keyed by DkSyncID
+  (`merge3`/`diffRecords` in `dekereke_core`) — git/GitHub is only the
+  content store and transport. `git merge` and GitHub's line-based
+  conflict machinery are never invoked: the Companion merges objects
+  locally, renders the canonical form, and commits the already-merged
+  result. The canonical form's one-field-per-line property just makes the
+  *stored* history compact and pleasant to eyeball on github.com — it is
+  not the merge mechanism.
 
 **Scope note (multi-writer, heterogeneous):** the sync graph is N full
 Dekereke databases (unmodified Windows app, multiple researchers as

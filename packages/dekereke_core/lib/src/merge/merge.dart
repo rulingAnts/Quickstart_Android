@@ -362,3 +362,131 @@ List<IdentifiedRecord> identifyRecords(
       IdentifiedRecord(idsInOrder[i], record),
   ];
 }
+
+// ---- Object-level diff ------------------------------------------------------
+
+/// One field's change between two versions of a record. Null values mean
+/// the field was absent on that side (absent ≠ empty).
+final class RecordFieldChange {
+  final String fieldName;
+  final int occurrence;
+  final bool isFragment;
+  final String? fromValue;
+  final String? toValue;
+
+  const RecordFieldChange({
+    required this.fieldName,
+    this.occurrence = 0,
+    this.isFragment = false,
+    required this.fromValue,
+    required this.toValue,
+  });
+
+  @override
+  String toString() =>
+      'RecordFieldChange($fieldName: $fromValue -> $toValue)';
+}
+
+/// A record present in both versions with different content.
+final class ChangedRecord {
+  final String id;
+
+  /// Display data (from the newer version) for plain-language rendering.
+  final String reference;
+  final String gloss;
+
+  final List<RecordFieldChange> changes;
+
+  const ChangedRecord({
+    required this.id,
+    required this.reference,
+    required this.gloss,
+    required this.changes,
+  });
+}
+
+/// What changed between two checkpoints, at the record/field level —
+/// this powers "Saved by Seth — 3 words changed" history summaries and
+/// per-record tracked changes. Line numbers never appear anywhere.
+final class DatabaseDiff {
+  final List<IdentifiedRecord> added;
+  final List<IdentifiedRecord> removed;
+  final List<ChangedRecord> changed;
+
+  /// True when the shared records appear in a different order (a grid
+  /// re-sort, not a content change — reported separately so summaries
+  /// don't count it as an edit).
+  final bool orderChanged;
+
+  const DatabaseDiff({
+    required this.added,
+    required this.removed,
+    required this.changed,
+    required this.orderChanged,
+  });
+
+  bool get isEmpty =>
+      added.isEmpty && removed.isEmpty && changed.isEmpty && !orderChanged;
+}
+
+/// Object-level diff between two identified record lists (older [from] →
+/// newer [to]), keyed on DkSyncID like everything else.
+DatabaseDiff diffRecords(
+    List<IdentifiedRecord> from, List<IdentifiedRecord> to) {
+  final fromById = {for (final r in from) r.id: r.record};
+  final toById = {for (final r in to) r.id: r.record};
+
+  final added = [for (final r in to) if (!fromById.containsKey(r.id)) r];
+  final removed = [for (final r in from) if (!toById.containsKey(r.id)) r];
+
+  final changed = <ChangedRecord>[];
+  for (final r in to) {
+    final before = fromById[r.id];
+    if (before == null || before == r.record) continue;
+    final beforeSlots = _slots(before);
+    final afterSlots = _slots(r.record);
+    final slots = <_Slot>[...afterSlots.keys];
+    for (final slot in beforeSlots.keys) {
+      if (!afterSlots.containsKey(slot)) slots.add(slot);
+    }
+    final changes = <RecordFieldChange>[
+      for (final slot in slots)
+        if (!_same(beforeSlots[slot], afterSlots[slot]))
+          RecordFieldChange(
+            fieldName: slot.$1,
+            occurrence: slot.$2,
+            isFragment: (afterSlots[slot] ?? beforeSlots[slot])
+                is DekerekeFragmentField,
+            fromValue: _valueOf(beforeSlots[slot]),
+            toValue: _valueOf(afterSlots[slot]),
+          ),
+    ];
+    changed.add(ChangedRecord(
+      id: r.id,
+      reference: r.record.reference,
+      gloss: r.record.gloss,
+      changes: changes,
+    ));
+  }
+
+  final sharedFromOrder = [
+    for (final r in from) if (toById.containsKey(r.id)) r.id
+  ];
+  final sharedToOrder = [
+    for (final r in to) if (fromById.containsKey(r.id)) r.id
+  ];
+  var orderChanged = false;
+  for (var i = 0; i < sharedFromOrder.length; i++) {
+    if (sharedFromOrder[i] != sharedToOrder[i]) {
+      orderChanged = true;
+      break;
+    }
+  }
+
+  return DatabaseDiff(
+    added: added,
+    removed: removed,
+    changed: changed,
+    orderChanged: orderChanged,
+  );
+}
