@@ -320,9 +320,9 @@ The app follows Clean Architecture principles:
 ### Android
 
 #### Minimum SDK Version
-Set in `android/app/build.gradle`:
-```gradle
-minSdk 21  // Android 5.0+
+Set in `android/app/build.gradle.kts`:
+```kotlin
+minSdk = 23  // Android 6.0+, required by the `record` audio plugin
 ```
 
 #### Permissions

@@ -155,13 +155,21 @@ class DatabaseService {
           affected++;
         } else {
           final current = WordlistEntry.fromMap(existing.first);
-          final merged = entry.copyWith(
-            id: current.id,
-            localTranscription: current.localTranscription,
-            audioFilename: current.audioFilename,
-            recordedAt: current.recordedAt,
-            isCompleted: current.isCompleted,
-          );
+          // Keep this device's collected data when it has any; otherwise
+          // accept whatever the incoming file carries (e.g. restoring a
+          // previously exported backup).
+          final hasCollected = current.isCompleted ||
+              (current.localTranscription?.isNotEmpty ?? false) ||
+              (current.audioFilename?.isNotEmpty ?? false);
+          final merged = hasCollected
+              ? entry.copyWith(
+                  id: current.id,
+                  localTranscription: current.localTranscription,
+                  audioFilename: current.audioFilename,
+                  recordedAt: current.recordedAt,
+                  isCompleted: current.isCompleted,
+                )
+              : entry.copyWith(id: current.id);
           await txn.update(
             'wordlist_entries',
             merged.toMap(),

@@ -121,6 +121,25 @@ void main() {
       expect(merged.audioFilename, '0001body.wav'); // preserved
       expect(merged.isCompleted, true); // preserved
     });
+
+    test('restores incoming collected data when this device has none',
+        () async {
+      final db = DatabaseService.instance;
+      await db.replaceAllEntries([entry('0001', 'body')]);
+
+      // Merging an exported backup that already contains a transcription.
+      final fromBackup = WordlistEntry(
+        reference: '0001',
+        gloss: 'body',
+        localTranscription: 'bɔdi',
+        isCompleted: true,
+      );
+      await db.mergeEntries([fromBackup]);
+
+      final restored = (await db.getAllWordlistEntries()).single;
+      expect(restored.localTranscription, 'bɔdi');
+      expect(restored.isCompleted, true);
+    });
   });
 
   group('schema migration v1 -> v2', () {

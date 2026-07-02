@@ -28,7 +28,9 @@ dependencies:
   archive: ^3.4.9
   
   # Audio Recording & Playback
-  record: ^5.0.4
+  # record 6.x is required: 5.x ships a record_linux that no longer matches
+  # record_platform_interface, which breaks the Android release build.
+  record: ^6.0.0
   audioplayers: ^5.2.1
   permission_handler: ^11.1.0
   
