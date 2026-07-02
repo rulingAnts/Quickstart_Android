@@ -45,7 +45,10 @@ jobs:
 
   build-windows:
     name: Build Windows executable
-    runs-on: windows-latest
+    # windows-2022 pinned: the windows-2025 image cannot locate Visual
+    # Studio for Flutter's CMake generator ("could not find any instance
+    # of Visual Studio").
+    runs-on: windows-2022
     needs: analyze-and-test
     defaults:
       run:

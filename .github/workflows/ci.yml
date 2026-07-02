@@ -74,14 +74,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # The nested pure-Dart package needs its own resolution, or the
-      # repo-wide analyzer pass reports unresolvable imports inside it.
-      - name: Resolve packages/dekereke_core
-        run: dart pub get
-        working-directory: packages/dekereke_core
-
+      # Scoped to the app's own code: packages/ and apps/ have their own
+      # jobs/workflows, and an unscoped repo-wide analyze breaks whenever
+      # a sub-project's dependencies aren't resolved in this job.
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze lib test
 
       - name: Run tests
         run: flutter test
