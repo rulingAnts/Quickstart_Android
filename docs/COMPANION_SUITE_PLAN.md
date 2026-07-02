@@ -123,18 +123,36 @@ local paths (sound folder, Praat). Local paths never sync.
 
 `<Reference>` is a design flaw as a key: Dekereke enforces neither
 uniqueness nor presence, and it doubles as the audio-naming convention.
-The Companion separates **identity** from **label**:
+The Companion separates **identity** from **label** — and keeps identity
+entirely out of Dekereke's reach (a hidden column can't be kept hidden or
+read-only in the Windows app, so correctness must not depend on one):
 
-- **`DkSyncID` hidden column = identity.** A short random ID (~12 chars)
-  added to every record at workspace adoption and minted at checkpoint time
-  for records created anywhere (Dekereke supports arbitrary custom columns;
-  the shipped settings hide it via `hidden_columns`, as the real
-  Barnabas-DkUserSettings.xml already does for other columns). Merge and
-  task matching key on `DkSyncID`. Consequences: duplicate References merge
-  losslessly (flagged, not fatal), missing References still sync,
-  renumbering is just a field edit, and phone results match their exact
-  source records. If a hand edit strips an ID, the next checkpoint re-mints
-  one (worst case the record looks new; recoverable from history).
+- **Sidecar identity map = authority.** `.deksync/identity.json` (versioned
+  and synced like everything else) maps `DkSyncID → record fingerprint`,
+  where the fingerprint carries several independent signals: full content
+  hash, `SoundFile` value, Reference+Gloss, file position. Dekereke never
+  sees this file; nothing done in its UI can damage it.
+- **Re-binding at every checkpoint** (every watched Dekereke save, so drift
+  between reconciliations is tiny): match records to IDs by exact content
+  hash (covers ~99% each save) → SoundFile → Reference+Gloss → position
+  hint → rare plain-language repair prompt. IDs are *restored*, never
+  re-minted, whenever any signal matches; truly new records get new IDs;
+  vanished records become explicit, user-confirmed deletions at sync time.
+  Duplicated rows: best match keeps the ID, the copy is minted fresh and
+  flagged as near-duplicate content.
+- **No ID column in the XML for v1.** IDs travel between machines via the
+  synced sidecar, and to/from phones inside `task.json` (our format) —
+  never inside the wordlist XML. The only flow that would want an in-file
+  ID is a full DB copy leaving the ecosystem by email/USB and returning;
+  that is handled by one-time content matching at adoption (same ladder).
+  P0 tests whether Dekereke preserves unknown flat and *nested* tags
+  through load/save — if nested tags survive invisibly (as its own
+  `<qvp_acoustic_data_>` does), that becomes an optional tamper-resistant
+  embedding for later; if not, sidecar-only is confirmed.
+- Merge and task matching key on `DkSyncID` (from the sidecar).
+  Consequences: duplicate References merge losslessly (flagged, not
+  fatal), missing References still sync, renumbering is just a field edit,
+  and phone results match their exact source records.
 - **Database health panel = Reference lint.** Audio naming still leans on
   Reference, so the Companion continuously flags: duplicate References,
   empty References, SoundFile↔Reference mismatches, orphaned audio files,
@@ -144,9 +162,9 @@ The Companion separates **identity** from **label**:
 - **Reserved Reference blocks per collaborator** prevent two machines from
   minting the same new Reference; auto-assignment picks the next free
   number in the local block.
-- P0 must verify Dekereke's grid/save/Update-From-File preserve an unknown
-  `DkSyncID` column (documented as first-class custom columns; verify, not
-  guess).
+- P0 experiment (informs the *optional* embedding only — nothing in v1
+  depends on it): whether Dekereke's grid shows, and load/save/
+  Update-From-File preserve, unknown flat tags and unknown nested tags.
 
 ### 4.2b Merge (the heart)
 
@@ -280,7 +298,7 @@ manifest like any other sync. Consent logs archive alongside the checkpoint.
 
 | Phase | Delivers | Notes |
 |---|---|---|
-| **P0 Verify** | Format deltas of the Dec-2025 Dekereke rewrite vs legacy; backup filename scheme; whether its merge preserves unknown tags; its recorder's WAV spec | Empirical, on the Windows VM; blocks nothing else except final canonicalizer details |
+| **P0 Verify** | Format deltas of the Dec-2025 Dekereke rewrite vs legacy; backup filename scheme; unknown flat/nested tag survival through grid/save/Update-From-File (decides optional ID embedding); whether grid re-sort rewrites file record order on save (position-hint validity); its recorder's WAV spec | Empirical, on the Windows VM; blocks nothing else except final canonicalizer details |
 | **P1 History** ("backup killer") | `dekereke_core` + Companion single-user: workspace adoption, save-watching auto-checkpoints, history/restore UI, DK-Backup sweep | Immediately useful to Seth alone; no server, no accounts |
 | **P2 Sync** | GitHub device-flow setup, pull-merge-push, conflict UI, audio manifest + Worker/R2 + FLAC pipeline, invites for colleagues | The colleague send/receive request |
 | **P3 Delegation (offline)** | Researcher task builder, `.dektask`/`.dekresult`, phone task mode | Phone changes land in Quickstart_Android |
