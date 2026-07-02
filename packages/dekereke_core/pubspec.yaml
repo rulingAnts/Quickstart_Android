@@ -1,0 +1,22 @@
+name: dekereke_core
+description: >-
+  Pure Dart core for the Dekereke Companion Suite: Dekereke XML codec,
+  canonical form, settings model, record identity & reconciliation,
+  three-way merge, audio manifest, and task package formats.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # Kept in step with the phone app's versions (see /pubspec.yaml) so the
+  # app can adopt this package without a dependency solve fight.
+  archive: ^3.4.9
+  collection: ^1.18.0
+  crypto: ^3.0.3
+  xml: ^6.4.2
+
+dev_dependencies:
+  lints: ^5.0.0
+  test: ^1.25.0

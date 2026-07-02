@@ -11,6 +11,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dekereke-core:
+    name: dekereke_core (pure Dart)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/dekereke_core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      - name: Run tests
+        run: dart test
+
   analyze-and-test:
     name: Analyze & test
     runs-on: ubuntu-latest
@@ -25,6 +47,12 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      # The nested pure-Dart package needs its own resolution, or the
+      # repo-wide analyzer pass reports unresolvable imports inside it.
+      - name: Resolve packages/dekereke_core
+        run: dart pub get
+        working-directory: packages/dekereke_core
 
       - name: Analyze
         run: flutter analyze

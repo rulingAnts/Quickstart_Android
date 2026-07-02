@@ -107,8 +107,11 @@ Three deliverables, one shared core:
 ### 4.1 Canonical form (what history is kept in)
 
 Git stores a **canonical UTF-8** rendering, not the UTF-16 working file:
-UTF-8, LF, one field per line, records in Reference order, unknown/nested
-fragments preserved verbatim. The Companion converts on the fly:
+UTF-8, LF, one field per line, records in original file order (decision D8 —
+sorting by Reference was dropped: it breaks the exact inverse and the
+position identity signal, and Reference allows duplicates/blanks),
+unknown/nested fragments preserved verbatim. Full spec + implementation:
+`packages/dekereke_core/doc/canonical_form.md`. The Companion converts on the fly:
 pull → materialize UTF-16 LE + BOM + CRLF for Dekereke; checkpoint → parse
 back to canonical. (This is the git-hook idea done properly — the phone app
 already has tested code for exactly this conversion.) Result: meaningful

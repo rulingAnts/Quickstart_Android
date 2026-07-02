@@ -108,6 +108,7 @@ at connect.flextext.app) is the field-tested model. Key transplants:
 | D5 | Text history in GitHub private repo (device-flow sign-in); audio blobs in R2 behind invite-auth Worker; colleagues need zero accounts | Planned (Q2 decides which CF account) |
 | D6 | Desktop = Flutter (Windows) sharing `dekereke_core` with phone app | Recommended, awaiting confirmation (Q7) |
 | D7 | Phones = constrained satellites (task packages, leased writable columns), never peers | **Decided** (plan §4.2b, §5) |
+| D8 | Canonical form preserves file record order (draft plan said "Reference order"): sorting would break the exact-inverse guarantee, position-hint identity signals, and assumes P0 #3; Reference isn't sortable anyway (duplicates/blanks) | **Decided** (session 2026-07-02, engineering call — veto welcome); spec in `packages/dekereke_core/doc/canonical_form.md` |
 
 Open questions Q2–Q7: see plan §7 (Q1 resolved).
 
