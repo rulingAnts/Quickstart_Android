@@ -134,10 +134,14 @@ audible test WAVs, and the numbered click-by-click
 ## Prioritized backlog for a cloud session (all doable in-repo)
 
 1. ~~**`packages/dekereke_core`**~~ **DONE in PR #6** (2026-07-02): all
-   sub-items below implemented with 132 tests (fixture byte-identity
-   round-trips included) and a dedicated `dekereke-core` CI job. Specs:
-   `packages/dekereke_core/doc/canonical_form.md` + `task_packages.md`.
-   Original scope for reference:
+   sub-items below implemented with 174 tests (fixture byte-identity
+   round-trips included) and a dedicated `dekereke-core` CI job — plus
+   beyond the original scope: object-level `diffRecords` (tracked
+   changes/history summaries), health panel rules (§4.2 Reference lint),
+   Reference block allocation (D4), and the content-addressed BlobStore
+   interface + audio sync planning (D5) with memory/filesystem backends.
+   Specs: `packages/dekereke_core/doc/canonical_form.md` +
+   `task_packages.md`. Original scope for reference:
    - Dekereke XML model + codec: port/extend the proven code in
      `lib/services/xml_service.dart` (UTF-16 LE/BE/UTF-8 sniffing +
      encodeUtf16Le already exist and are tested); add: nested/unknown
@@ -158,9 +162,11 @@ audible test WAVs, and the numbered click-by-click
      carrying the ID map.
    - Tests against `test_data/dekereke_fixtures/` (synthetic, format-
      faithful, safe to extend).
-2. **Phone app task mode** (plan §5.4): task import, config-driven
-   elicitation fields, suffix-aware recording names, `.dekresult` export.
-   Keep all 45 existing tests green.
+2. ~~**Phone app task mode**~~ **DONE in PR #6** (2026-07-02, plan §5.4):
+   `.dektask` import, config-driven elicitation (visible/playable/writable
+   fields), suffix-aware 16-bit mono WAV recording, FLAC reference
+   playback, validated `.dekresult` export. All 45 pre-existing tests
+   green + 24 new. Smoke-test package: `test_data/sample_task/`.
 3. **Worker scaffold** (`workers/dekereke-sync/` or separate repo later):
    D1 schema + invite/claim/poll endpoints per the patterns above. Deploy
    is Seth's (GitHub Actions + wrangler), so build it deployment-ready with
