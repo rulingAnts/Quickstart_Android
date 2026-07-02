@@ -127,7 +127,11 @@ planted probe tags + a numbered click-by-click checklist.
 
 ## Prioritized backlog for a cloud session (all doable in-repo)
 
-1. **`packages/dekereke_core`** (pure Dart, the heart — start here):
+1. ~~**`packages/dekereke_core`**~~ **DONE in PR #6** (2026-07-02): all
+   sub-items below implemented with 132 tests (fixture byte-identity
+   round-trips included) and a dedicated `dekereke-core` CI job. Specs:
+   `packages/dekereke_core/doc/canonical_form.md` + `task_packages.md`.
+   Original scope for reference:
    - Dekereke XML model + codec: port/extend the proven code in
      `lib/services/xml_service.dart` (UTF-16 LE/BE/UTF-8 sniffing +
      encodeUtf16Le already exist and are tested); add: nested/unknown

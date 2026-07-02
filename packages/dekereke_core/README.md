@@ -15,11 +15,11 @@ exercised by the `dekereke-core` CI job.
 | `codec/` | ✅ | UTF-16 LE/BE/UTF-8 detection and codec; Dekereke XML ⇄ model with verbatim unknown-fragment preservation; byte-identical round-trip for Dekereke-written files |
 | canonical form | ✅ | Deterministic UTF-8/LF rendering + exact inverse to the UTF-16 working format — spec in [`doc/canonical_form.md`](doc/canonical_form.md) |
 | `model/` | ✅ | Database/record/field model; SoundFile cell + suffix rules |
-| settings | ⏳ | `DkUserSettings.xml` model; shared vs. machine-local split (plan §4.1) |
-| identity | ⏳ | Record fingerprints, sidecar identity map, reconciliation ladder (plan §4.2) |
-| merge | ⏳ | Record+field three-way merge keyed on DkSyncID (plan §4.2b) |
-| audio manifest | ⏳ | `filename → {sha256, bytes}` manifest, diff, conflict policy (plan §4.4) |
-| task packages | ⏳ | `.dektask` / `.dekresult` formats (plan §5.2) |
+| `settings/` | ✅ | `DkUserSettings.xml` model; shared vs. machine-local split; byte-identical round-trip (plan §4.1) |
+| `identity/` | ✅ | Record fingerprints, sidecar identity map (`deksync-identity` JSON), reconciliation ladder (plan §4.2) |
+| `merge/` | ✅ | Record+field three-way merge keyed on DkSyncID; conflicts carry plain-language data; deletions never implicit (plan §4.2b) |
+| `audio/` | ✅ | `filename → {sha256, bytes}` manifest, dedupe report, diff, 3-way merge with keep-both policy (plan §4.4) |
+| `task/` | ✅ | `.dektask` / `.dekresult` formats — spec in [`doc/task_packages.md`](doc/task_packages.md) (plan §5.2) |
 
 ## Ground rules
 

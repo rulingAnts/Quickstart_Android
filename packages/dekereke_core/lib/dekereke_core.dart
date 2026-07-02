@@ -14,3 +14,4 @@ export 'src/merge/merge.dart';
 export 'src/model/database.dart';
 export 'src/model/sound_file.dart';
 export 'src/settings/settings.dart';
+export 'src/task/task_package.dart';
