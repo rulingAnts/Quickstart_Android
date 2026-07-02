@@ -10,3 +10,4 @@ export 'src/codec/xml_writer.dart'
     show escapeXmlText, escapeXmlAttribute, serializeXmlNode;
 export 'src/model/database.dart';
 export 'src/model/sound_file.dart';
+export 'src/settings/settings.dart';
