@@ -147,41 +147,46 @@ The app follows Clean Architecture principles with:
 
 ## XML Format
 
-### Dekereke XML Import Structure
+The app reads and writes the real Dekereke XML structure used by the
+[QWOM data file](https://github.com/rulingAnts/QWOM_Data): a UTF-16
+little-endian file with a `<phon_data>` root containing one `<data_form>`
+record per word. All fields in each record are preserved on import and
+written back on export, with `<Phonetic>` filled from the collected
+transcription and `<SoundFile>` pointing at the recorded WAV file.
+
 ```xml
-<Wordlist>
-  <Entry>
+<?xml version="1.0" encoding="utf-16" standalone="yes" ?>
+<phon_data>
+  <data_form>
     <Reference>0001</Reference>
+    <CAWL>1</CAWL>
+    <Category>N</Category>
     <Gloss>body</Gloss>
-    <Picture>optional_image.jpg</Picture>
-  </Entry>
-</Wordlist>
+    <SoundFile>0001body.wav</SoundFile>
+    <Image_File>0001body.png</Image_File>
+    <GlossTokPisin>bodi</GlossTokPisin>
+    <GlossIndonesian>tubuh, badan</GlossIndonesian>
+    <Phonetic>bɔdi</Phonetic>
+    <SemanticDomain>Body parts</SemanticDomain>
+    ...
+  </data_form>
+</phon_data>
 ```
 
-### Dekereke XML Export Structure
-```xml
-<Wordlist>
-  <Entry>
-    <Reference>0001</Reference>
-    <Gloss>body</Gloss>
-    <LocalWord>IPA transcription</LocalWord>
-    <SoundFile>0001body.wav</SoundFile>
-    <Picture>optional_image.jpg</Picture>
-  </Entry>
-</Wordlist>
-```
+A simplified `<Wordlist>/<Entry>` structure (Reference/Gloss/Picture) is
+also accepted for hand-made test files, and UTF-8 files are detected
+automatically.
 
 ## Future Enhancements
 
 ### Planned Features (Phase 2+)
-- [ ] Consent screen UI for verbal/written consent
 - [ ] LIFT XML export format
-- [ ] Image display for wordlist entries
 - [ ] Cloud sync capabilities
 - [ ] Custom font integration (Charis SIL, Doulos SIL)
 - [ ] Enhanced keyboard support (Keyman integration)
 - [ ] Offline-first architecture improvements
 - [ ] Data validation and quality checks
+- [ ] Configurable consent text (per-language, via bundling wizard)
 
 ## License
 

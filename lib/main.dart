@@ -42,10 +42,11 @@ class WordlistElicitationApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [
-          Locale('en', ''), // English
-          Locale('es', ''), // Spanish
-          Locale('fr', ''), // French
-          Locale('pt', ''), // Portuguese
+          Locale('en'), // English
+          Locale('id'), // Indonesian
+          Locale('es'), // Spanish
+          Locale('fr'), // French
+          Locale('pt'), // Portuguese
           // Add more locales as needed
         ],
         home: const HomeScreen(),

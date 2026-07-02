@@ -64,6 +64,73 @@ void main() {
       expect(updated.localTranscription, 'bɔdi');
       expect(updated.isCompleted, true);
     });
+
+    test('omits id from map when null so SQLite can auto-assign', () {
+      final entry = WordlistEntry(reference: '0001', gloss: 'body');
+      expect(entry.toMap().containsKey('id'), false);
+    });
+
+    test('round-trips Dekereke fields through the map', () {
+      final entry = WordlistEntry(
+        reference: '0002',
+        gloss: 'skin (human)',
+        glossIndonesian: 'kulit',
+        glossTokPisin: 'skin',
+        category: 'N',
+        semanticDomain: 'Body parts',
+        soundFile: '0002skin.wav',
+        xmlFieldsJson: WordlistEntry.encodeXmlFields([
+          const MapEntry('Reference', '0002'),
+          const MapEntry('Gloss', 'skin (human)'),
+        ]),
+      );
+
+      final restored = WordlistEntry.fromMap(entry.toMap());
+      expect(restored.glossIndonesian, 'kulit');
+      expect(restored.glossTokPisin, 'skin');
+      expect(restored.category, 'N');
+      expect(restored.semanticDomain, 'Body parts');
+      expect(restored.soundFile, '0002skin.wav');
+      expect(restored.xmlFields.length, 2);
+      expect(restored.xmlFields[1].value, 'skin (human)');
+    });
+
+    group('recording filenames', () {
+      test('uses the wordlist-assigned SoundFile name when present', () {
+        final entry = WordlistEntry(
+          reference: '0002',
+          gloss: 'skin (human)',
+          soundFile: '0002skin.wav',
+        );
+        expect(entry.recordingFilename, '0002skin.wav');
+      });
+
+      test('builds a sanitized name when SoundFile is absent', () {
+        expect(
+          WordlistEntry(reference: '0001', gloss: 'body').recordingFilename,
+          '0001body.wav',
+        );
+        expect(
+          WordlistEntry(reference: '0002', gloss: 'skin (human)')
+              .recordingFilename,
+          '0002skin.human.wav',
+        );
+        expect(
+          WordlistEntry(reference: '0010', gloss: 'go / walk')
+              .recordingFilename,
+          '0010go.walk.wav',
+        );
+      });
+
+      test('sanitizer strips filesystem-hostile characters', () {
+        expect(WordlistEntry.sanitizeGlossForFilename('big man'), 'big.man');
+        expect(WordlistEntry.sanitizeGlossForFilename('what?!'), 'what');
+        expect(
+          WordlistEntry.sanitizeGlossForFilename('  (go) fast  '),
+          'go.fast',
+        );
+      });
+    });
   });
 
   group('ConsentRecord', () {

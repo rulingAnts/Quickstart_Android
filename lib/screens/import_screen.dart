@@ -93,7 +93,8 @@ class _ImportScreenState extends State<ImportScreen> {
               const Divider(),
               const SizedBox(height: 16),
               const Text(
-                'Note: This will replace any existing wordlist data.',
+                'Note: If you already have recordings, you can choose to '
+                'keep them when importing an updated wordlist.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -114,36 +115,85 @@ class _ImportScreenState extends State<ImportScreen> {
         allowedExtensions: ['xml'],
       );
 
-      if (result != null && result.files.single.path != null) {
-        setState(() {
-          _isImporting = true;
-          _statusMessage = 'Importing wordlist...';
-        });
+      final filePath = result?.files.single.path;
+      if (filePath == null) return;
+      if (!mounted) return;
 
-        final filePath = result.files.single.path!;
-        final importCount = await _xmlService.importDekerekeXml(filePath);
+      // If data has already been collected, let the user choose between
+      // replacing everything and updating the wordlist in place.
+      final provider = context.read<WordlistProvider>();
+      var merge = false;
+      if (provider.completedCount > 0) {
+        final choice = await _askReplaceOrMerge();
+        if (choice == null) return; // cancelled
+        merge = choice;
+      }
+      if (!mounted) return;
 
-        // Reload the wordlist in the provider
-        if (mounted) {
-          await context.read<WordlistProvider>().loadWordlist();
-        }
+      setState(() {
+        _isImporting = true;
+        _statusMessage = 'Importing wordlist...';
+      });
 
-        setState(() {
-          _isImporting = false;
-          _statusMessage = 'Successfully imported $importCount entries!';
-        });
+      final importResult =
+          await _xmlService.importDekerekeXml(filePath, merge: merge);
 
-        // Navigate back after a delay
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) {
-          Navigator.pop(context);
-        }
+      if (!mounted) return;
+      await context.read<WordlistProvider>().loadWordlist();
+      if (!mounted) return;
+
+      final details = <String>[
+        'Imported ${importResult.imported} entries.',
+        if (importResult.skippedDuplicates > 0)
+          '${importResult.skippedDuplicates} duplicate references skipped.',
+        if (importResult.skippedInvalid > 0)
+          '${importResult.skippedInvalid} incomplete records skipped.',
+      ];
+      setState(() {
+        _isImporting = false;
+        _statusMessage = details.join('\n');
+      });
+
+      // Navigate back after a delay
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.pop(context);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isImporting = false;
         _statusMessage = 'Error importing file: ${e.toString()}';
       });
     }
+  }
+
+  /// Returns true to merge (keep collected data), false to replace all,
+  /// null if cancelled.
+  Future<bool?> _askReplaceOrMerge() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Existing data found'),
+        content: const Text(
+          'You already have recordings or transcriptions. How should the '
+          'new wordlist be imported?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Replace everything'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Update, keep my data'),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -18,9 +18,22 @@ This documentation, including the project goals, feature set, and technical scop
 
 ---
 
-## 🚧 Project Status: Seeking Initial Contributors 🚀
+## 🚧 Project Status: Working MVP (Flutter) 🚀
 
-**This project is currently in the conceptual and planning phase.** We are actively seeking **Android Developers** interested in linguistic fieldwork and open-source software to help build the initial application structure and core features. If you are looking for a high-impact project, please check the **Issues** tab to see initial feature discussions!
+**A working Flutter implementation now lives in this repository** covering the
+MVP feature set: Dekereke XML import/export (real `phon_data`/`data_form`
+format, UTF-16), audio recording with correct WAV naming, session resume,
+informed-consent capture, and ZIP export. See [FLUTTER_README.md](FLUTTER_README.md)
+for developer documentation and [CHANGELOG.md](CHANGELOG.md) for what has been
+fixed and added.
+
+**Getting an APK without building locally:** every push to `main` runs the
+[GitHub Actions CI workflow](.github/workflows/ci.yml), which analyzes, tests,
+and builds an installable APK. Open the repository's **Actions** tab, select
+the latest successful run, and download the `wordlist-elicitation-apk`
+artifact for sideloading.
+
+Contributions remain very welcome — check the **Issues** tab!
 
 ## Core Features and Technical Scope (MVP Focus)
 
