@@ -163,6 +163,11 @@ its own branch, and keep every commit CI-green.
 
 ## Working agreements
 
+- **Model policy: Claude Fable only** (pinned in `.claude/settings.json`:
+  model + allowlist + no fallbacks). If you ever detect you are running as
+  a different model (Opus/Sonnet/etc.), STOP immediately, say so, and wait
+  — do not continue the work on a downgraded model. If Fable usage limits
+  are hit, stop and wait for the reset; never switch models to keep going.
 - **Use GitHub Actions/Workflows as much as possible for testing,
   troubleshooting, and building** (Seth's explicit instruction): extend
   `.github/workflows/` with jobs for `dekereke_core` tests, phone-app

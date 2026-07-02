@@ -1,0 +1,7 @@
+{
+  "model": "claude-fable-5",
+  "fallbackModel": [],
+  "availableModels": ["claude-fable-5"],
+  "enforceAvailableModels": true,
+  "switchModelsOnFlag": false
+}
