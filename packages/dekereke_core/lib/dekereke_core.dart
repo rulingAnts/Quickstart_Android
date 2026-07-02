@@ -4,6 +4,7 @@
 /// `doc/canonical_form.md` for the canonical-form specification.
 library;
 
+export 'src/audio/manifest.dart';
 export 'src/codec/db_codec.dart';
 export 'src/codec/encoding.dart';
 export 'src/codec/xml_writer.dart'
