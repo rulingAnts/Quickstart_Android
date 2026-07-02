@@ -6,6 +6,9 @@ audio/*.*
 
 # But allow test data
 !test_data/
+# The synthetic (non-real) settings fixture is exempt from the global
+# *DkUserSettings.xml ignore rule that protects real settings files.
+!test_data/dekereke_fixtures/synthetic-DkUserSettings.xml
 
 # macOS specific files
 .DS_Store
