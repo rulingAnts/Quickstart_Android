@@ -9,6 +9,7 @@ export 'src/codec/encoding.dart';
 export 'src/codec/xml_writer.dart'
     show escapeXmlText, escapeXmlAttribute, serializeXmlNode;
 export 'src/identity/identity.dart';
+export 'src/merge/merge.dart';
 export 'src/model/database.dart';
 export 'src/model/sound_file.dart';
 export 'src/settings/settings.dart';
