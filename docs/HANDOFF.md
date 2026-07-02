@@ -167,13 +167,20 @@ audible test WAVs, and the numbered click-by-click
    fields), suffix-aware 16-bit mono WAV recording, FLAC reference
    playback, validated `.dekresult` export. All 45 pre-existing tests
    green + 24 new. Smoke-test package: `test_data/sample_task/`.
-3. **Worker scaffold** (`workers/dekereke-sync/` or separate repo later):
-   D1 schema + invite/claim/poll endpoints per the patterns above. Deploy
-   is Seth's (GitHub Actions + wrangler), so build it deployment-ready with
-   its own additive migration files.
-4. **Companion desktop scaffold** (Flutter Windows) — UI shells for
-   history/restore and sync; the engine is dekereke_core. CI: GitHub
-   Actions windows runner can build it.
+3. ~~**Worker scaffold**~~ **DONE in PR #6** (2026-07-02):
+   `workers/dekereke-sync/` — engine-only per D5 (no R2 binding, no user
+   blobs): owner bootstrap, one-time invites/claims (atomic, idempotent
+   retry), approval step, desired/reported two-lane relay with CAS.
+   Additive D1 migrations; 16 integration tests against real workerd+D1
+   (Miniflare); `worker-engine` CI job. Deploy remains Seth's (wrangler
+   steps documented in `wrangler.toml`/README).
+4. ~~**Companion desktop scaffold**~~ **DONE in PR #6** (2026-07-02):
+   `apps/companion/` — Flutter Windows shell sharing dekereke_core; the
+   Health check screen is already functional (real parser + health rules
+   against a picked database); History/Sync are plain-language
+   placeholders. Path-filtered `companion.yml` workflow: ubuntu
+   analyze/test + windows-2022 release build uploaded as the
+   `dekereke-companion-windows` artifact.
 
 Do NOT start server deployments, don't touch PR #5's app code except via
 its own branch, and keep every commit CI-green.
