@@ -103,14 +103,16 @@ at connect.flextext.app) is the field-tested model. Key transplants:
 |---|---|---|
 | D1 | Pin minimum Dekereke version, Windows-only v1 | **Decided** (Seth 2026-07-02); which build → pending P0/Seth |
 | D2 | Identity = synced sidecar map + checkpoint re-binding ladder (content hash → SoundFile → Reference+Gloss → position → prompt); NO in-file ID column in v1 | **Decided** (plan §4.2) |
-| D3 | FLAC in cloud/transit, WAV on disk | Recommended, awaiting Seth's yes (Q3) |
-| D4 | Reference labels auto-assigned from per-collaborator blocks | Recommended (Q4) |
-| D5 | Text history in GitHub private repo (device-flow sign-in); audio blobs in R2 behind invite-auth Worker; colleagues need zero accounts | Planned (Q2 decides which CF account) |
-| D6 | Desktop = Flutter (Windows) sharing `dekereke_core` with phone app | Recommended, awaiting confirmation (Q7) |
+| D3 | **WAV everywhere** — no FLAC at rest or between databases; new recordings are ALWAYS 16-bit mono WAV. Single exception: reference audio exported DB→phone in `.dektask` (playback-only) MAY be FLAC to cut size/bandwidth; never the other direction | **Decided** (Seth 2026-07-02, Q3 — overturns the earlier FLAC-in-cloud recommendation) |
+| D4 | Reference labels auto-assigned from per-collaborator blocks; Companion picks sensible defaults (e.g. 1000/person), allocation visible in the health panel | **Decided** (Seth 2026-07-02, Q4) |
+| D5 | Seth's Cloudflare account hosts the **engine only** — Worker + D1 for accounts/enrollment, metadata, keys/invites, relay between app instances (flextext model). **No user data storage on his account**; nothing that can get him throttled/charged by others' usage. Each database owner brings their own storage for audio + DB repos: **both backends from day one** behind one pluggable content-addressed blob-store interface — owner's Google Drive (API-only: immutable sha256-named blobs, append-only, no Drive Sync app, no in-place edits — sidesteps every Drive weakness Seth named) and owner's own R2. Text history stays in the owner's GitHub private repo (device-flow). Colleagues still zero accounts: the Worker brokers short-lived storage access; audio bytes flow device↔owner storage directly | **Decided** (Seth 2026-07-02, Q2+Q5) |
+| D6 | Desktop = Flutter (Windows) sharing `dekereke_core` with phone app | **Decided** (Seth 2026-07-02, Q7) |
 | D7 | Phones = constrained satellites (task packages, leased writable columns), never peers | **Decided** (plan §4.2b, §5) |
 | D8 | Canonical form preserves file record order (draft plan said "Reference order"): sorting would break the exact-inverse guarantee, position-hint identity signals, and assumes P0 #3; Reference isn't sortable anyway (duplicates/blanks) | **Decided** (session 2026-07-02, engineering call — veto welcome); spec in `packages/dekereke_core/doc/canonical_form.md` |
+| D9 | Assume overlapping edits are common: the plain-language conflict UI is first-class (column leases still reduce conflicts but are not relied on) | **Decided** (Seth 2026-07-02, Q6) |
+| D10 | **Product scope:** general-purpose tool for many teams — Seth's own Fayu project is NOT the driving deployment. Typical owner starts from a local folder on one Windows machine and needs share/track/merge from there. (Seth's real files remain the format ground truth; the seeding/dedupe P0 items are now "typical user" features, not a Fayu migration) | **Decided** (Seth 2026-07-02, Q5 reframe) |
 
-Open questions Q2–Q7: see plan §7 (Q1 resolved).
+All plan §7 questions are RESOLVED (Q1–Q7, 2026-07-02) — see the log above.
 
 ## P0 checklist (REQUIRES Seth's Windows VM — a cloud session cannot do these)
 

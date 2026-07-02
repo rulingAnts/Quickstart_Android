@@ -12,7 +12,7 @@ sorted member order): the same package always produces the same bytes.
 |---|---|
 | `task.json` | envelope below |
 | `wordlist.xml` | the subset database, **canonical UTF-8** (`doc/canonical_form.md`) — the phone parser accepts it as-is |
-| `audio/<name>` | reference recordings for playable fields |
+| `audio/<name>` | reference recordings for playable fields — WAV, or FLAC-compressed to save bandwidth (decision D3's single FLAC exception: DB→phone, playback-only) |
 | `pictures/<name>` | optional picture prompts |
 
 `task.json`:
@@ -54,7 +54,7 @@ sorted member order): the same package always produces the same bytes.
 | Member | Content |
 |---|---|
 | `result.json` | envelope below |
-| `audio/<name>` | new recordings, already named `<base><suffix>.wav` |
+| `audio/<name>` | new recordings, already named `<base><suffix>.wav` — ALWAYS 16-bit mono WAV (decision D3); never FLAC in this direction |
 
 `result.json`:
 
