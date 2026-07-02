@@ -1,0 +1,28 @@
+name: dekereke_companion
+description: >-
+  Dekereke Companion (desktop): history, sync and delegation for shared
+  Dekereke databases. Scaffold — the engine is packages/dekereke_core.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The shared engine (same package the phone app uses).
+  dekereke_core:
+    path: ../../packages/dekereke_core
+
+  # Desktop-friendly file open dialogs.
+  file_selector: ^1.0.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
