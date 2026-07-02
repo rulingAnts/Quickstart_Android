@@ -185,6 +185,20 @@ audible test WAVs, and the numbered click-by-click
 Do NOT start server deployments, don't touch PR #5's app code except via
 its own branch, and keep every commit CI-green.
 
+### Queued: optional academic permissions system (spec needed from Seth)
+
+Seth wants the flextext editor suite's optional academic permissions
+system added (requested 2026-07-02). Its design is NOT documented in this
+repo and the flextext repos are not visible from cloud sessions — do not
+guess it from the name; wait for Seth's description (he offered to paste
+one). Details needed: what is permitted (view/export/publish; per
+database/column/record), parties (who grants/requests/revokes),
+lifecycle, enforcement point (Worker checks vs client vs key release à la
+flextext Ki/Kr), what "optional" toggles, and any agreement/legal text.
+Natural anchor points already built: `installs` roles + approval in the
+Worker (additive migrations), per-column task grants, consent logs in
+`.dekresult`.
+
 ## Working agreements
 
 - **Model policy: Claude Fable only** (pinned in `.claude/settings.json`:
