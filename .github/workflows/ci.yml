@@ -33,6 +33,32 @@ jobs:
       - name: Run tests
         run: dart test
 
+  worker-engine:
+    name: dekereke-sync engine (Worker)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/dekereke-sync
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/dekereke-sync/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Builds with esbuild, then runs vitest against Miniflare (real
+      # workerd + D1, migration applied from migrations/).
+      - name: Run tests
+        run: npm test
+
   analyze-and-test:
     name: Analyze & test
     runs-on: ubuntu-latest

@@ -1,0 +1,24 @@
+# Dekereke Companion Suite engine (decision D5): enrollment, metadata,
+# keys/invites and relay ONLY. No R2 binding on purpose — user blobs live
+# in each owner's own storage; nothing here scales with users' data.
+#
+# Deploying (maintainer, one-time + updates):
+#   1. wrangler d1 create dekereke-sync   → paste database_id below
+#   2. wrangler d1 migrations apply dekereke-sync --remote
+#   3. wrangler deploy
+# CI deploys can use the same commands with a scoped CLOUDFLARE_API_TOKEN
+# repo secret (GitHub-Actions-only deploys, per the flextext model).
+
+name = "dekereke-sync-engine"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Keep workers_dev alive alongside any custom domain so deployed clients
+# never break (flextext ops pattern).
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dekereke-sync"
+database_id = "REPLACE-AFTER-wrangler-d1-create"
+migrations_dir = "migrations"
