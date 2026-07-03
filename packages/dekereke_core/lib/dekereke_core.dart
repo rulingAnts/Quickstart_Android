@@ -7,6 +7,7 @@ library;
 export 'src/audio/blob_store.dart';
 export 'src/audio/manifest.dart';
 export 'src/codec/db_codec.dart';
+export 'src/consent/consent.dart';
 export 'src/codec/encoding.dart';
 export 'src/codec/xml_writer.dart'
     show escapeXmlText, escapeXmlAttribute, serializeXmlNode;

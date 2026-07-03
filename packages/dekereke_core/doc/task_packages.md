@@ -14,6 +14,7 @@ sorted member order): the same package always produces the same bytes.
 | `wordlist.xml` | the subset database, **canonical UTF-8** (`doc/canonical_form.md`) — the phone parser accepts it as-is |
 | `audio/<name>` | reference recordings for playable fields — WAV, or FLAC-compressed to save bandwidth (decision D3's single FLAC exception: DB→phone, playback-only) |
 | `pictures/<name>` | optional picture prompts |
+| `consent/<name>` | consent prompt/continuation audio referenced by the schema'd `consent` block (decision D11; see `docs/CONSENT_DESIGN.md`) — decode fails if a referenced recording is missing |
 
 `task.json`:
 
@@ -55,6 +56,13 @@ sorted member order): the same package always produces the same bytes.
 |---|---|
 | `result.json` | envelope below |
 | `audio/<name>` | new recordings, already named `<base><suffix>.wav` — ALWAYS 16-bit mono WAV (decision D3); never FLAC in this direction |
+| `consent/receipt-<id>.json` (+ `.txt`) | tamper-evident consent receipts (D11); the JSON is canonical, the `.txt` advisory |
+| `consent/<audio>` | spoken assents + the prompt audio that was played |
+
+With consent configured, each `values[]`/`recordings[]` entry carries
+`receiptId`, `receiptSha256` and `collectedAt`; `validateResult` enforces
+the covering-receipt rules of `docs/CONSENT_DESIGN.md` §2.2 (consent-off
+tasks are exempt).
 
 `result.json`:
 

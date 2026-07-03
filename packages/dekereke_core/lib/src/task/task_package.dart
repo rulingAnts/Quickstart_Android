@@ -22,6 +22,7 @@ import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
 
 import '../codec/db_codec.dart';
+import '../consent/consent.dart';
 import '../merge/merge.dart' show IdentifiedRecord;
 import '../model/database.dart';
 
@@ -161,6 +162,10 @@ final class DekTask {
   TaskField? fieldFor(String column) =>
       fields.firstWhereOrNull((f) => f.column == column);
 
+  /// The consent block, schema'd (decision D11). Legacy free-form blocks
+  /// parse as a disabled config with everything preserved in `extra`.
+  ConsentConfig get consentConfig => ConsentConfig.fromJson(consent);
+
   String toJson() => const JsonEncoder.withIndent('  ').convert({
         'format': format,
         'version': formatVersion,
@@ -206,16 +211,35 @@ final class DekTaskPackage {
   /// Optional picture prompts, keyed by bare filename.
   final Map<String, Uint8List> pictures;
 
+  /// Consent assets (`consent/` member): the researcher-recorded prompt
+  /// and continuation audio the [DekTask.consentConfig] references.
+  final Map<String, Uint8List> consentFiles;
+
   DekTaskPackage({
     required this.task,
     required this.wordlist,
     this.audio = const {},
     this.pictures = const {},
+    this.consentFiles = const {},
   }) {
     if (task.records.length != wordlist.records.length) {
       throw ArgumentError(
           'ID map (${task.records.length}) and wordlist '
           '(${wordlist.records.length} records) must align');
+    }
+    final config = task.consentConfig;
+    if (config.enabled) {
+      final problems = config.validate();
+      for (final file in [config.audioFile, config.continuationAudioFile]) {
+        if (file != null && file.isNotEmpty && !consentFiles.containsKey(file)) {
+          problems.add('Consent recording "$file" is referenced but not '
+              'bundled.');
+        }
+      }
+      if (problems.isNotEmpty) {
+        throw FormatException(
+            'The task\'s consent setup is incomplete:\n${problems.join('\n')}');
+      }
     }
   }
 
@@ -234,6 +258,7 @@ Uint8List encodeDekTask(DekTaskPackage package) {
   _addZipFile(archive, 'wordlist.xml', encodeCanonicalFile(package.wordlist));
   _addFileMap(archive, 'audio', package.audio);
   _addFileMap(archive, 'pictures', package.pictures);
+  _addFileMap(archive, 'consent', package.consentFiles);
   return Uint8List.fromList(ZipEncoder().encode(archive)!);
 }
 
@@ -253,28 +278,46 @@ DekTaskPackage decodeDekTask(Uint8List bytes) {
     wordlist: parseDekerekeFile(wordlistXml),
     audio: _extractDir(entries, 'audio'),
     pictures: _extractDir(entries, 'pictures'),
+    consentFiles: _extractDir(entries, 'consent'),
   );
 }
 
-/// One collected cell value.
+/// One collected cell value. The consent stamp fields (D11) are optional
+/// for back-compat; when the task configures consent they are required by
+/// [validateResult]'s coverage check.
 final class ResultValue {
   final String dkSyncId;
   final String column;
   final String value;
+  final String? receiptId;
+  final String? receiptSha256;
+  final String? collectedAt;
 
   const ResultValue({
     required this.dkSyncId,
     required this.column,
     required this.value,
+    this.receiptId,
+    this.receiptSha256,
+    this.collectedAt,
   });
 
-  Map<String, Object> toJson() =>
-      {'id': dkSyncId, 'column': column, 'value': value};
+  Map<String, Object> toJson() => {
+        'id': dkSyncId,
+        'column': column,
+        'value': value,
+        if (receiptId != null) 'receiptId': receiptId!,
+        if (receiptSha256 != null) 'receiptSha256': receiptSha256!,
+        if (collectedAt != null) 'collectedAt': collectedAt!,
+      };
 
   factory ResultValue.fromJson(Map<String, Object?> json) => ResultValue(
         dkSyncId: json['id'] as String,
         column: json['column'] as String,
         value: json['value'] as String? ?? '',
+        receiptId: json['receiptId'] as String?,
+        receiptSha256: json['receiptSha256'] as String?,
+        collectedAt: json['collectedAt'] as String?,
       );
 
   @override
@@ -282,32 +325,52 @@ final class ResultValue {
       other is ResultValue &&
       other.dkSyncId == dkSyncId &&
       other.column == column &&
-      other.value == value;
+      other.value == value &&
+      other.receiptId == receiptId &&
+      other.receiptSha256 == receiptSha256 &&
+      other.collectedAt == collectedAt;
 
   @override
-  int get hashCode => Object.hash(dkSyncId, column, value);
+  int get hashCode =>
+      Object.hash(dkSyncId, column, value, receiptId, receiptSha256, collectedAt);
 }
 
-/// One new recording, already named `<base><suffix>.wav`.
+/// One new recording, already named `<base><suffix>.wav`. Consent stamp
+/// fields as on [ResultValue].
 final class ResultRecording {
   final String dkSyncId;
   final String column;
   final String filename;
+  final String? receiptId;
+  final String? receiptSha256;
+  final String? collectedAt;
 
   const ResultRecording({
     required this.dkSyncId,
     required this.column,
     required this.filename,
+    this.receiptId,
+    this.receiptSha256,
+    this.collectedAt,
   });
 
-  Map<String, Object> toJson() =>
-      {'id': dkSyncId, 'column': column, 'filename': filename};
+  Map<String, Object> toJson() => {
+        'id': dkSyncId,
+        'column': column,
+        'filename': filename,
+        if (receiptId != null) 'receiptId': receiptId!,
+        if (receiptSha256 != null) 'receiptSha256': receiptSha256!,
+        if (collectedAt != null) 'collectedAt': collectedAt!,
+      };
 
   factory ResultRecording.fromJson(Map<String, Object?> json) =>
       ResultRecording(
         dkSyncId: json['id'] as String,
         column: json['column'] as String,
         filename: json['filename'] as String,
+        receiptId: json['receiptId'] as String?,
+        receiptSha256: json['receiptSha256'] as String?,
+        collectedAt: json['collectedAt'] as String?,
       );
 
   @override
@@ -315,10 +378,14 @@ final class ResultRecording {
       other is ResultRecording &&
       other.dkSyncId == dkSyncId &&
       other.column == column &&
-      other.filename == filename;
+      other.filename == filename &&
+      other.receiptId == receiptId &&
+      other.receiptSha256 == receiptSha256 &&
+      other.collectedAt == collectedAt;
 
   @override
-  int get hashCode => Object.hash(dkSyncId, column, filename);
+  int get hashCode => Object.hash(
+      dkSyncId, column, filename, receiptId, receiptSha256, collectedAt);
 }
 
 /// `result.json`.
@@ -384,27 +451,61 @@ final class DekResultPackage {
   /// New recordings, keyed by bare filename.
   final Map<String, Uint8List> audio;
 
-  const DekResultPackage({required this.result, this.audio = const {}});
+  /// Consent receipts covering the collected items (D11).
+  final List<ConsentReceipt> receipts;
+
+  /// Consent audio (spoken assents, and the prompt audio for provenance),
+  /// keyed by bare filename — stored under the `consent/` member.
+  final Map<String, Uint8List> consentFiles;
+
+  const DekResultPackage({
+    required this.result,
+    this.audio = const {},
+    this.receipts = const [],
+    this.consentFiles = const {},
+  });
 }
 
-/// Encodes a `.dekresult` ZIP (deterministic bytes).
+/// Encodes a `.dekresult` ZIP (deterministic bytes). Each receipt is
+/// written twice: canonical JSON + advisory human-readable text.
 Uint8List encodeDekResult(DekResultPackage package) {
   final archive = Archive();
   _addZipFile(archive, 'result.json', utf8.encode(package.result.toJson()));
   _addFileMap(archive, 'audio', package.audio);
+  final consentMembers = <String, Uint8List>{...package.consentFiles};
+  for (final receipt in package.receipts) {
+    consentMembers[receiptJsonMemberName(receipt)] =
+        Uint8List.fromList(utf8.encode(receipt.toJsonString()));
+    consentMembers[receiptTextMemberName(receipt)] =
+        Uint8List.fromList(utf8.encode(receipt.renderHumanText()));
+  }
+  _addFileMap(archive, 'consent', consentMembers);
   return Uint8List.fromList(ZipEncoder().encode(archive)!);
 }
 
-/// Decodes a `.dekresult` ZIP.
+/// Decodes a `.dekresult` ZIP. Receipts are parsed from
+/// `consent/receipt-*.json` with their integrity hashes verified.
 DekResultPackage decodeDekResult(Uint8List bytes) {
   final entries = _readZip(bytes, kind: '.dekresult');
   final resultJson = entries['result.json'];
   if (resultJson == null) {
     throw const FormatException('Not a .dekresult: result.json is missing');
   }
+  final consentEntries = _extractDir(entries, 'consent');
+  final receipts = <ConsentReceipt>[];
+  final consentFiles = <String, Uint8List>{};
+  for (final entry in consentEntries.entries) {
+    if (RegExp(r'^receipt-.+\.json$').hasMatch(entry.key)) {
+      receipts.add(ConsentReceipt.fromJson(utf8.decode(entry.value)));
+    } else if (!entry.key.endsWith('.txt')) {
+      consentFiles[entry.key] = entry.value;
+    }
+  }
   return DekResultPackage(
     result: DekResult.fromJson(utf8.decode(resultJson)),
     audio: _extractDir(entries, 'audio'),
+    receipts: receipts,
+    consentFiles: consentFiles,
   );
 }
 
@@ -446,6 +547,46 @@ List<String> validateResult(DekTask task, DekResultPackage package) {
       problems.add('Recording file "${recording.filename}" is listed but '
           'missing from the package');
     }
+  }
+
+  // Consent coverage (D11, design §2.2): applies only when the task
+  // configures consent; consent-off tasks and pre-consent results are
+  // exempt by design.
+  final consentConfig = task.consentConfig;
+  if (consentConfig.enabled) {
+    for (final receipt in package.receipts) {
+      if (receipt.taskId != null &&
+          !receiptCoversTask(receipt,
+              taskId: task.taskId, baseCheckpointId: task.baseCheckpointId)) {
+        problems.add('Receipt ${receipt.id} covers a different task '
+            '("${receipt.taskId}").');
+      }
+      final assentFile = (receipt.json['response']
+          as Map<String, Object?>?)?['assentFile'] as String?;
+      if (assentFile != null && !package.consentFiles.containsKey(assentFile)) {
+        problems.add('Receipt ${receipt.id} references spoken assent '
+            '"$assentFile", which is missing from the package.');
+      }
+    }
+    problems.addAll(validateConsentCoverage(
+      receipts: package.receipts,
+      items: [
+        for (final v in result.values)
+          StampedItem(
+            description: 'The answer for word ${v.dkSyncId} (${v.column})',
+            receiptId: v.receiptId,
+            receiptSha256: v.receiptSha256,
+            collectedAtIso: v.collectedAt,
+          ),
+        for (final r in result.recordings)
+          StampedItem(
+            description: 'Recording "${r.filename}"',
+            receiptId: r.receiptId,
+            receiptSha256: r.receiptSha256,
+            collectedAtIso: r.collectedAt,
+          ),
+      ],
+    ));
   }
   return problems;
 }
