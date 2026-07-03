@@ -185,19 +185,21 @@ audible test WAVs, and the numbered click-by-click
 Do NOT start server deployments, don't touch PR #5's app code except via
 its own branch, and keep every commit CI-green.
 
-### Queued: optional academic permissions system (spec needed from Seth)
+### Queued: consent system (design ready, awaiting Q-A..Q-D answers)
 
-Seth wants the flextext editor suite's optional academic permissions
-system added (requested 2026-07-02). Its design is NOT documented in this
-repo and the flextext repos are not visible from cloud sessions — do not
-guess it from the name; wait for Seth's description (he offered to paste
-one). Details needed: what is permitted (view/export/publish; per
-database/column/record), parties (who grants/requests/revokes),
-lifecycle, enforcement point (Worker checks vs client vs key release à la
-flextext Ki/Kr), what "optional" toggles, and any agreement/legal text.
-Natural anchor points already built: `installs` roles + approval in the
-Worker (additive migrations), per-column task grants, consent logs in
-`.dekresult`.
+Seth supplied the flextext consent-system spec (2026-07-02: two
+composable axes — ask: text/audio; confirm: yesno/record/signature —
+frozen prompts, bundled receipts). The wordlist adaptation is designed
+and adversarially panel-reviewed in `docs/CONSENT_DESIGN.md` (v1.1):
+consent covers a SCOPE (one ceremony per speaker × imported wordlist,
+never per recording), items stamp receiptId+hash, receipts are
+tamper-evident (content hash + per-device chain), lightweight
+researcher-recorded continuation prompts, withdrawal route added (the
+shipped app has none post-assent). Implementation blocked ONLY on the
+four §6 decisions (continuation default, IP/location, speaker-name
+field, withdrawal export behavior) — get Seth's answers, log them here,
+then build: core ConsentConfig/ConsentReceipt + format carriers first,
+phone ceremony UI second, Companion task-builder UI with P3.
 
 ## Working agreements
 
