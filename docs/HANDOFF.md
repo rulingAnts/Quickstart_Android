@@ -111,6 +111,7 @@ at connect.flextext.app) is the field-tested model. Key transplants:
 | D8 | Canonical form preserves file record order (draft plan said "Reference order"): sorting would break the exact-inverse guarantee, position-hint identity signals, and assumes P0 #3; Reference isn't sortable anyway (duplicates/blanks) | **Decided** (session 2026-07-02, engineering call — veto welcome); spec in `packages/dekereke_core/doc/canonical_form.md` |
 | D9 | Assume overlapping edits are common: the plain-language conflict UI is first-class (column leases still reduce conflicts but are not relied on) | **Decided** (Seth 2026-07-02, Q6) |
 | D10 | **Product scope:** general-purpose tool for many teams — Seth's own Fayu project is NOT the driving deployment. Typical owner starts from a local folder on one Windows machine and needs share/track/merge from there. (Seth's real files remain the format ground truth; the seeding/dedupe P0 items are now "typical user" features, not a Fayu migration) | **Decided** (Seth 2026-07-02, Q5 reframe) |
+| D11 | **Consent system** (full design: `docs/CONSENT_DESIGN.md` v1.2): flextext two-axis model (ask text/audio × confirm yesno/record/signature), adapted so consent covers a SCOPE — **per voice × per task**, one ceremony per task package, researcher-configurable re-consent button (default enabled) for voice/person changes, speaker-name field optional by default, task-builder advisory that everyone involved consents. Receipts tamper-evident (canonical-JSON hash + per-device chain + audio hashes + playback evidence), stamped onto every collected item, bundled in exports. No IP/location in v1; withdrawal exports items flagged, never silently dropped; time-based continuation optional, default none | **Decided** (Seth 2026-07-03, Q-A..Q-D) |
 
 All plan §7 questions are RESOLVED (Q1–Q7, 2026-07-02) — see the log above.
 
@@ -185,21 +186,21 @@ audible test WAVs, and the numbered click-by-click
 Do NOT start server deployments, don't touch PR #5's app code except via
 its own branch, and keep every commit CI-green.
 
-### Queued: consent system (design ready, awaiting Q-A..Q-D answers)
+### Queued: consent system implementation (design DECIDED — D11)
 
-Seth supplied the flextext consent-system spec (2026-07-02: two
-composable axes — ask: text/audio; confirm: yesno/record/signature —
-frozen prompts, bundled receipts). The wordlist adaptation is designed
-and adversarially panel-reviewed in `docs/CONSENT_DESIGN.md` (v1.1):
-consent covers a SCOPE (one ceremony per speaker × imported wordlist,
-never per recording), items stamp receiptId+hash, receipts are
-tamper-evident (content hash + per-device chain), lightweight
-researcher-recorded continuation prompts, withdrawal route added (the
-shipped app has none post-assent). Implementation blocked ONLY on the
-four §6 decisions (continuation default, IP/location, speaker-name
-field, withdrawal export behavior) — get Seth's answers, log them here,
-then build: core ConsentConfig/ConsentReceipt + format carriers first,
-phone ceremony UI second, Companion task-builder UI with P3.
+`docs/CONSENT_DESIGN.md` v1.2 is fully decided (D11). Build order:
+1. `dekereke_core`: `ConsentConfig` (schema'd task.json consent block +
+   coherence validation), `ConsentReceipt` (canonical JSON + content
+   hash + per-device chain + deterministic .txt rendering), the §2.2
+   covering-receipt check in `validateResult`, `consent/` carriers in
+   `.dektask`/`.dekresult` (+ `receiptId`/`receiptSha256` on
+   values/recordings entries).
+2. Phone app: config-driven two-axis ceremony UI (generalize the
+   consent screen), re-consent button, withdrawal route (none exists
+   post-assent today), receipt stamping + additive DB migration.
+3. Companion (P3): consent config in the task builder + the fixed
+   everyone-consents advisory; receipt archive at merge-back; flagged
+   withdrawal surfacing.
 
 ## Working agreements
 

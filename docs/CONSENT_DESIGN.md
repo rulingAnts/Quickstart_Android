@@ -1,10 +1,10 @@
-# Consent for wordlist collection — design (v1.1, panel-reviewed)
+# Consent for wordlist collection — design (v1.2, decided)
 
 Adapts the FlexText suite's consent system (spec provided by Seth,
-2026-07-02) to this project. v1.1 incorporates an adversarial design
-review (field-usability, IRB-auditability, implementation-fit lenses);
-§7 lists what the review changed. Status: **awaiting Seth's answers to
-the decisions in §6** — record them in the HANDOFF decision log.
+2026-07-02) to this project. v1.1 incorporated an adversarial design
+review (§7); **v1.2 incorporates Seth's decisions (2026-07-03, §6 — all
+resolved, logged as D11 in HANDOFF)**. Status: ready to implement
+(core → phone UI → Companion task builder).
 
 ## 1. What transplants unchanged from FlexText
 
@@ -84,39 +84,48 @@ enabled; consent-off tasks and pre-consent format versions are exempt
 
 ### 2.3 Ceremony triggers
 
-A new **full ceremony** is required when the consent scope changes:
+**Seth's model (D11): consent is per voice × per task.** A new **full
+ceremony** runs:
 
-1. **Any import that replaces the wordlist** — a `.dektask` (new or
+1. **On any import that replaces the wordlist** — a `.dektask` (new or
    re-issued: same `taskId` with a NEW `baseCheckpointId` is a new
    scope) or a plain-mode XML import. This single rule closes both
    review-found holes: plain-mode list swaps and task re-issues can
    never ride on a stale receipt.
-2. **Speaker change** (per decision Q-C).
+2. **On demand, via the re-consent button** (§2.4) — the voice changed,
+   or another person became involved.
 3. **After a withdrawal.**
 
 Re-entering elicitation for an unchanged, already-consented scope never
-re-runs the full ceremony (continuation policy below governs it).
+re-runs the full ceremony.
 
-### 2.4 Lightweight continuation
+### 2.4 Re-consent within a task (D11 — replaces time-based continuation)
 
-Configurable per task: `none` | `perDay` | `perSession`.
+The default: **one ceremony covers its whole task** until withdrawal or
+replacement — no calendar-driven prompts.
 
-- `perDay`: fires on the first *entry into elicitation* on a new local
-  calendar date — it never interrupts a running session at midnight.
-- `perSession`: every entry into elicitation. (Note for researchers:
-  low-end Android kills backgrounded apps aggressively; this can prompt
-  often.)
-- **Continuation content is researcher data too** (review finding):
-  `ConsentConfig` carries a *short* `continuationMessage` and/or
-  `continuationAudio` — e.g. a 5-second "Shall we keep recording words
-  today?" in the local language — validated as required for each
-  enabled ask mode when policy ≠ `none`. The full ceremony prompt is
-  NOT replayed daily; that would make the anti-annoyance mechanism
-  maximally annoying for exactly the non-literate speakers it serves.
-- The continuation screen offers affirm AND "not now" (exit without a
-  receipt, nothing recorded, elicitation stays closed); decline-forever
-  is the withdrawal flow.
-- Affirm logs a `continuation` receipt chaining to its ceremony.
+- **Re-consent button** (researcher-configurable per task, default
+  enabled): an always-visible option in elicitation that starts a fresh
+  full ceremony — used when a different speaker takes over the voice
+  work or an additional person becomes involved. Each ceremony records
+  its own `speakerName` (§3), so one task legitimately accumulates
+  multiple ceremony receipts — one per voice — and items collected
+  after a re-consent stamp the newest ceremony.
+- **Task-builder advisory** (fixed text shown to the researcher when
+  configuring consent in the Companion): *"every person whose voice or
+  answers this task collects should give their own permission — use the
+  re-consent button in the app when someone new takes over."*
+- **Scope wording is the researcher's tool**: the frozen scope
+  statement (and the ceremony's speaker-name field) is where a
+  deployment can be as precise as its ethics process needs — naming the
+  columns, the voice, the purpose. The design deliberately does not try
+  to auto-define scope beyond task identity.
+- Time-based prompts (`perDay` | `perSession`, with their own short
+  researcher-recorded `continuationMessage`/`continuationAudio`) remain
+  available as an OPTIONAL extra for deployments whose ethics process
+  wants them; default `none`. When enabled, an affirm logs a
+  `continuation` receipt chaining to its ceremony, and the screen
+  offers affirm AND "not now" (exit, nothing recorded).
 
 ### 2.5 Withdrawal
 
@@ -222,19 +231,24 @@ proper ceremony (which trigger #1 does anyway).
 - IP/geolocation capture unless Q-B says otherwise.
 - Multi-speaker rosters on one device beyond the Q-C name field.
 
-## 6. Decisions for Seth (record in HANDOFF log)
+## 6. Decisions — RESOLVED (Seth, 2026-07-03; HANDOFF D11)
 
-- **Q-A Continuation default**: `perDay` (recommended), `none`, or
-  `perSession`?
-- **Q-B IP/location capture**: omit in v1 (recommended — offline
-  fieldwork, no location permission in the app today), or FlexText-style
-  best-effort with a one-time permission ask?
-- **Q-C Speaker identity**: optional free-text speaker-name field in the
-  ceremony, researcher-configurable required/optional/off?
-  (Recommended: yes, optional by default.)
-- **Q-D Withdrawal + already-collected items**: export them normally but
-  flagged (recommended — the researcher's own procedure decides), or
-  hold them back until the researcher confirms?
+- **Q-A Re-consent model**: consent is **per voice × per task**, not
+  per time period. One ceremony per task package; a
+  researcher-configurable **re-consent button** (default enabled)
+  triggers a fresh ceremony when the voice/person changes; the task
+  builder advises the researcher that everyone involved must give their
+  own permission; scope precision lives in the researcher-supplied
+  statement. Time-based prompts remain optional, default `none` (§2.4).
+- **Q-B IP/location**: **omitted in v1**; schema fields stay as
+  `"unavailable"` so later capture is non-breaking.
+- **Q-C Speaker identity**: **yes — speaker-name field, optional by
+  default**, researcher-configurable required/optional/off; the field
+  is what distinguishes multiple per-voice ceremonies within one task.
+- **Q-D Withdrawal**: **export flagged** — items collected under
+  then-valid consent stay in exports, marked *collected before a later
+  withdrawal*; the Companion surfaces it in plain language; the
+  researcher's procedure decides.
 
 ## 7. Review log (what the adversarial panel changed in v1.1)
 
