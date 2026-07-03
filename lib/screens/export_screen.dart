@@ -1,8 +1,10 @@
+import 'package:dekereke_core/dekereke_core.dart' show DekTask;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/wordlist_provider.dart';
 import '../services/export_service.dart';
+import '../services/task_service.dart';
 
 class ExportScreen extends StatefulWidget {
   const ExportScreen({super.key});
@@ -13,8 +15,28 @@ class ExportScreen extends StatefulWidget {
 
 class _ExportScreenState extends State<ExportScreen> {
   final ExportService _exportService = ExportService();
+  final TaskService _taskService = TaskService();
+
+  /// Active task, if any: exports then produce a `.dekresult` answers file
+  /// instead of the full ZIP backup.
+  DekTask? _activeTask;
+  bool _taskLoaded = false;
+
   bool _isExporting = false;
   String? _exportedFilePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _taskService.getActiveTask().then((task) {
+      if (mounted) {
+        setState(() {
+          _activeTask = task;
+          _taskLoaded = true;
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +121,8 @@ class _ExportScreenState extends State<ExportScreen> {
                     width: double.infinity,
                     height: 64,
                     child: ElevatedButton.icon(
-                      onPressed: _isExporting ? null : _exportData,
+                      onPressed:
+                          _isExporting || !_taskLoaded ? null : _exportData,
                       icon: _isExporting
                           ? const SizedBox(
                               width: 24,
@@ -111,7 +134,11 @@ class _ExportScreenState extends State<ExportScreen> {
                             )
                           : const Icon(Icons.save_alt, size: 32),
                       label: Text(
-                        _isExporting ? 'Exporting...' : 'Export as ZIP',
+                        _isExporting
+                            ? 'Exporting...'
+                            : (_activeTask != null
+                                ? 'Export My Answers'
+                                : 'Export as ZIP'),
                         style: const TextStyle(fontSize: 18),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -146,13 +173,19 @@ class _ExportScreenState extends State<ExportScreen> {
                   ],
                   
                   const SizedBox(height: 32),
-                  const Text(
-                    'Export includes:\n'
-                    '• Dekereke XML with transcriptions\n'
-                    '• Audio recordings (WAV format)\n'
-                    '• Consent log',
+                  Text(
+                    _activeTask != null
+                        ? 'The answers file includes:\n'
+                            '• Your typed answers\n'
+                            '• Your recordings (WAV format)\n'
+                            '• Consent log\n'
+                            'Send it back to the person who gave you the task.'
+                        : 'Export includes:\n'
+                            '• Dekereke XML with transcriptions\n'
+                            '• Audio recordings (WAV format)\n'
+                            '• Consent log',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: 14),
                   ),
                 ],
               ),
@@ -192,8 +225,10 @@ class _ExportScreenState extends State<ExportScreen> {
     });
 
     try {
-      final filePath = await _exportService.exportData();
-      
+      final filePath = _activeTask != null
+          ? await _taskService.exportDekResult()
+          : await _exportService.exportData();
+
       setState(() {
         _isExporting = false;
         _exportedFilePath = filePath;

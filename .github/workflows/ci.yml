@@ -11,6 +11,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dekereke-core:
+    name: dekereke_core (pure Dart)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/dekereke_core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.9.4
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      - name: Run tests
+        run: dart test
+
+  worker-engine:
+    name: dekereke-sync engine (Worker)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/dekereke-sync
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workers/dekereke-sync/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Builds with esbuild, then runs vitest against Miniflare (real
+      # workerd + D1, migration applied from migrations/).
+      - name: Run tests
+        run: npm test
+
   analyze-and-test:
     name: Analyze & test
     runs-on: ubuntu-latest
@@ -26,8 +74,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # Scoped to the app's own code: packages/ and apps/ have their own
+      # jobs/workflows, and an unscoped repo-wide analyze breaks whenever
+      # a sub-project's dependencies aren't resolved in this job.
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze lib test
 
       - name: Run tests
         run: flutter test

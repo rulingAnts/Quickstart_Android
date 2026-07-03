@@ -1,0 +1,78 @@
+name: Companion desktop
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/companion/**'
+      - 'packages/dekereke_core/**'
+      - '.github/workflows/companion.yml'
+  pull_request:
+    paths:
+      - 'apps/companion/**'
+      - 'packages/dekereke_core/**'
+      - '.github/workflows/companion.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: companion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze-and-test:
+    name: Analyze & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/companion
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.6
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+  build-windows:
+    name: Build Windows executable
+    # windows-2022 pinned: the windows-2025 image cannot locate Visual
+    # Studio for Flutter's CMake generator ("could not find any instance
+    # of Visual Studio").
+    runs-on: windows-2022
+    needs: analyze-and-test
+    defaults:
+      run:
+        working-directory: apps/companion
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.35.6
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      # The Release folder is the complete runnable app (exe + DLLs +
+      # data) — download, unzip, run dekereke_companion.exe.
+      - name: Upload Windows build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dekereke-companion-windows
+          path: apps/companion/build/windows/x64/runner/Release/
+          retention-days: 30

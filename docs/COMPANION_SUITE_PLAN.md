@@ -75,12 +75,14 @@ Dekereke changelog and legacy binary.
 │                audio/*.wav           • sync (pull-merge-push)            │
 │                                      • delegation: build/merge tasks     │
 └──────────────────────────────┬───────────────────────────┬──────────────┘
-                    text + manifest                    audio blobs (FLAC)
+                    text + manifest                audio blobs (WAV, D3)
                                │                           │
-                 GitHub private repo (free)     Cloudflare Worker + R2
-                 canonical UTF-8 DB + history   (clone of flextext-r2-worker
-                 audio manifest, shared settings patterns; 10 GB free, no
-                               │                 egress fees; invite auth)
+                 GitHub private repo (free,     OWNER's blob storage (D5):
+                 owner's) canonical UTF-8 DB    Google Drive or owner R2 —
+                 + history, audio manifest,     immutable sha256-named blobs;
+                 shared settings                access brokered by the engine
+                               │                (maintainer's Worker + D1:
+                               │                enrollment/metadata/relay ONLY)
                                │                           │
 ┌──────────────────────────────┴───────────────────────────┴──────────────┐
 │  Colleague's PC — same Companion app, enrolled by invite                 │
@@ -97,18 +99,24 @@ Three deliverables, one shared core:
   the phone app (already Flutter) and the desktop app (Flutter for
   Windows/macOS). The phone app's proven XML round-trip code seeds this.
 - **Dekereke Companion** (Flutter desktop): sync + history + delegation UI.
-- **Worker backend**: small Cloudflare Worker + R2 + D1, copying
-  flextext-r2-worker's proven patterns (one-time invite links with secret in
-  URL fragment, client-minted credentials, rev-cursor polling, additive
-  migrations, GitHub-Actions-only deploys).
+- **Worker backend (the engine)**: small Cloudflare Worker + D1 on the
+  maintainer's account — enrollment, metadata, keys/invites, relay only;
+  no user blobs (D5) — copying flextext-r2-worker's proven patterns
+  (one-time invite links with secret in URL fragment, client-minted
+  credentials, rev-cursor polling, additive migrations,
+  GitHub-Actions-only deploys). Owner storage (Drive/R2) is accessed
+  directly by devices with short-lived brokered credentials.
 
 ## 4. Sync engine design
 
 ### 4.1 Canonical form (what history is kept in)
 
 Git stores a **canonical UTF-8** rendering, not the UTF-16 working file:
-UTF-8, LF, one field per line, records in Reference order, unknown/nested
-fragments preserved verbatim. The Companion converts on the fly:
+UTF-8, LF, one field per line, records in original file order (decision D8 —
+sorting by Reference was dropped: it breaks the exact inverse and the
+position identity signal, and Reference allows duplicates/blanks),
+unknown/nested fragments preserved verbatim. Full spec + implementation:
+`packages/dekereke_core/doc/canonical_form.md`. The Companion converts on the fly:
 pull → materialize UTF-16 LE + BOM + CRLF for Dekereke; checkpoint → parse
 back to canonical. (This is the git-hook idea done properly — the phone app
 already has tested code for exactly this conversion.) Result: meaningful
@@ -184,6 +192,15 @@ merge), then field-level within a record:
   next sync.
 - Sync = always pull → merge → checkpoint → push (no rebase/branch concepts
   surface anywhere; "branching" exists only implicitly and merges away).
+- **Object-level, never line-level:** merge, diff and tracked changes all
+  operate on the parsed record/field model keyed by DkSyncID
+  (`merge3`/`diffRecords` in `dekereke_core`) — git/GitHub is only the
+  content store and transport. `git merge` and GitHub's line-based
+  conflict machinery are never invoked: the Companion merges objects
+  locally, renders the canonical form, and commits the already-merged
+  result. The canonical form's one-field-per-line property just makes the
+  *stored* history compact and pleasant to eyeball on github.com — it is
+  not the merge mechanism.
 
 **Scope note (multi-writer, heterogeneous):** the sync graph is N full
 Dekereke databases (unmodified Windows app, multiple researchers as
@@ -210,40 +227,56 @@ same column to different speakers.
 
 - **Manifest, not LFS:** `audio-manifest.json` in the repo maps
   `filename → {sha256, bytes}`. Text history stays tiny; the manifest's git
-  history *is* the audio folder's history.
-- **Blobs in R2**, content-addressed by hash (immune to spaces/parens in
-  names), uploaded/downloaded through the Worker with Range support.
-  R2 free tier: 10 GB storage, **zero egress fees** — the decisive
-  advantage over GitHub (LFS free = 1 GB), Drive (quota/API pain), or B2
-  (egress caps).
-- **FLAC on the wire and at rest, WAV on disk** (verified: Dekereke plays
-  WAV only). Lossless FLAC ≈ 50–60% of WAV → ~30k files ≈ 8 GB WAV ≈
-  4–5 GB FLAC: fits free tier with headroom. Companion encodes on upload,
-  decodes on download; colleagues always see plain WAVs in their folder.
+  history *is* the audio folder's history. (Implemented in
+  `dekereke_core` `audio/`.)
+- **Blobs in the OWNER'S storage** (D5), content-addressed by sha256
+  (immune to spaces/parens in names), behind one pluggable blob-store
+  interface — immutable, append-only, hash-named objects. Two backends
+  from day one:
+  - **Google Drive** (default for low-tech-savvy owners): API-only —
+    never the Drive Sync app, never in-place edits, never duplicate-copy
+    juggling; blobs are only ever *added*, which is the one thing the
+    Drive API does well. 15 GB free that owners already have.
+  - **Owner's own Cloudflare R2** for owners willing to set one up
+    (10 GB free, zero egress).
+  The maintainer's Worker brokers enrollment and short-lived access
+  tokens; audio bytes flow device ↔ owner storage directly (no traffic
+  or storage on the maintainer's account).
+- **WAV everywhere** (D3): no transcoding at rest or between databases;
+  new recordings are ALWAYS 16-bit mono WAV. ~30k files ≈ 8 GB fits
+  Drive's 15 GB; owners can prune/split or move to R2 if they outgrow it.
+  The single FLAC exception lives in §5.2 (phone reference audio).
 - **Append-mostly reality:** recordings are rarely modified; a sync is
   usually "upload my 40 new takes, download Chris's 12". Re-record conflict
   (same filename, different hash, both sides) → keep both, rename the
-  incoming one visibly, surface in the conflict list.
-- **Seeding:** first 8 GB never goes over Papua internet — Companion
-  supports import-from-folder/USB with manifest verification; only deltas
-  sync thereafter.
-- Growth path if free tier is outgrown: R2 is $0.015/GB-month (≈ $0.08/mo
-  per extra 5 GB) — or a second free bucket per database.
+  incoming one visibly, surface in the conflict list. (Implemented:
+  `mergeManifests` + `resolveKeepBoth`.)
+- **Seeding:** the first gigabytes never need to cross slow links —
+  Companion supports import-from-folder/USB with manifest verification;
+  only deltas sync thereafter. The first manifest build doubles as a
+  dedupe report (`duplicateGroups`).
 
 ### 4.5 Accounts & setup (the "free + friendly" answer)
 
+- **The engine is deployed ONCE, by the maintainer** (Seth's Cloudflare
+  account, D5): Worker + D1 holding enrollment, metadata, keys/invites and
+  the relay — the exact operational model of flextext-r2-worker. It stores
+  no user blobs and proxies no audio, so nothing about it scales with
+  users' data.
 - **Database owner (one-time, guided):** GitHub account + private repo —
   Companion uses GitHub's **device flow** sign-in (type an 8-character code
-  into github.com; no manual PAT creation) with PAT entry as fallback;
-  Worker deployed once from a template repo via GitHub Actions (the exact
-  operational model flextext-r2-worker already uses).
+  into github.com; no manual PAT creation) with PAT entry as fallback —
+  plus connecting their storage backend: Google Drive OAuth (default) or
+  their own R2 credentials (§4.4).
 - **Colleagues: zero accounts.** The owner mints a one-time invite link/QR
   (flextext enrollment pattern: secret in URL fragment, client-minted
   credentials, owner approval step). A colleague installs Companion, opens
   the invite, picks a folder — done. Their git access is mediated by the
-  Worker (repo deploy key server-side), so they never touch GitHub.
+  Worker (repo deploy key server-side) and their storage access rides
+  short-lived tokens the Worker brokers, so they never touch GitHub, Drive
+  or Cloudflare themselves.
 - Everything rides free tiers: GitHub private repo, Workers free plan
-  (100k req/day), R2 10 GB, D1.
+  (100k req/day), D1, and the owner's own Drive 15 GB / R2 10 GB.
 
 ## 5. Delegation to the phone app
 
@@ -267,10 +300,15 @@ profiles), so it can also emit a matching `DkUserSettings` display profile:
 - **`.dektask` ZIP:** `task.json` (task id, base checkpoint id, field
   config, suffix assignments, consent config) + subset wordlist XML
   (canonical UTF-8 — the phone parser already accepts it) + `audio/` for
-  playable references + optional `pictures/`.
+  playable references + optional `pictures/`. Reference audio MAY be
+  FLAC-compressed here — the one FLAC exception (D3): DB→phone,
+  playback-only, never the other direction.
 - **`.dekresult` ZIP:** task id + base checkpoint + collected cell values +
-  new recordings (already named `<base><suffix>.wav`) + consent log —
-  a constrained superset of the phone app's existing export.
+  new recordings (already named `<base><suffix>.wav`, ALWAYS 16-bit mono
+  WAV per D3) + consent log — a constrained superset of the phone app's
+  existing export.
+- Both formats implemented + spec'd:
+  `packages/dekereke_core/doc/task_packages.md`.
 - Transport now: any file channel (USB, share sheet, Drive) — offline-first.
   Later phase: Worker relay with QR enrollment and rev-cursor polling
   (the flextext two-lane desired/reported protocol transplants directly).
@@ -290,7 +328,10 @@ manifest like any other sync. Consent logs archive alongside the checkpoint.
   fields with play buttons, K writable fields (text box / mic / both) —
   a generalization of today's hardcoded Gloss+Indonesian+Phonetic+mic.
 - Recording filenames honor the task's suffix assignment (existing
-  `recordingFilename` logic parameterized).
+  `recordingFilename` logic parameterized); recordings captured as
+  **16-bit mono WAV** (D3).
+- Playable reference fields must handle FLAC as well as WAV (the D3
+  exception; Android's player stack supports FLAC natively).
 - Export produces `.dekresult`. Everything else (consent, temp-file
   recording safety, session resume, dedupe) is already in place.
 
@@ -300,34 +341,32 @@ manifest like any other sync. Consent logs archive alongside the checkpoint.
 |---|---|---|
 | **P0 Verify** | Format deltas of the Dec-2025 Dekereke rewrite vs legacy; backup filename scheme; unknown flat/nested tag survival through grid/save/Update-From-File (decides optional ID embedding); whether grid re-sort rewrites file record order on save (position-hint validity); its recorder's WAV spec | Empirical, on the Windows VM; blocks nothing else except final canonicalizer details |
 | **P1 History** ("backup killer") | `dekereke_core` + Companion single-user: workspace adoption, save-watching auto-checkpoints, history/restore UI, DK-Backup sweep | Immediately useful to Seth alone; no server, no accounts |
-| **P2 Sync** | GitHub device-flow setup, pull-merge-push, conflict UI, audio manifest + Worker/R2 + FLAC pipeline, invites for colleagues | The colleague send/receive request |
+| **P2 Sync** | GitHub device-flow setup, pull-merge-push, conflict UI, audio manifest + owner blob storage (Drive + owner-R2 backends, D5; WAV everywhere, D3), invites for colleagues | The colleague send/receive request |
 | **P3 Delegation (offline)** | Researcher task builder, `.dektask`/`.dekresult`, phone task mode | Phone changes land in Quickstart_Android |
 | **P4 Online + polish** | Worker relay for phones (QR, polling), Mac support, multi-database | Optional niceties |
 
-## 7. Open questions (please answer / decide)
+## 7. Open questions — ALL RESOLVED (Seth, 2026-07-02)
 
-1. ~~Which Dekereke build(s)~~ **RESOLVED (Seth, 2026-07-02): the system
-   requires a pinned minimum Dekereke version, Windows only.** Remaining
-   sub-decision: pin the legacy 1.0.0.313 build or the Dec-2025 rewrite
-   (recommendation: the rewrite — actively developed, has built-in
-   recording; P0 verifies its format).
-2. **Hosting centralization:** OK to run the Worker + R2 on your Cloudflare
-   account (colleagues enroll by invite, zero accounts for them), sharing
-   the free tier with flextext? Or should each database owner deploy their
-   own from a template?
-3. **FLAC-at-rest tradeoff:** cloud/transfer in FLAC, but every machine
-   keeps the full WAV working folder (disk is cheap locally). Acceptable?
-4. **Reference block sizes:** identity is handled by `DkSyncID` (§4.2), but
-   new-Reference *labels* still auto-assign from per-collaborator blocks —
-   any preference on block layout (e.g. 1000-per-person), or should the
-   Companion just pick?
-5. **Where is the master audio folder today** — the Google Drive
-   "Core Phonology DB/audio" copy, the dekereke-sync path in the settings
-   file, or elsewhere? (Seeding + dedupe starts from the authoritative one.)
-6. **Does your colleague's workflow ever edit the same columns you edit**,
-   or are your domains mostly disjoint (e.g. they do `-bdoi`, you do
-   `-phon`)? (Calibrates how much conflict UI matters in P2.)
-7. **Desktop stack confirmation:** Flutter desktop (shares `dekereke_core`
-   with the phone app, one language) vs a web app like the FlexText suite.
-   Plan assumes Flutter desktop; a PWA can't watch the filesystem or run
-   git, which this design leans on.
+Answers live in the HANDOFF decision log (D1–D10); summaries:
+
+1. ~~Which Dekereke build(s)~~ **RESOLVED: pinned minimum Dekereke version,
+   Windows only** (D1). Remaining sub-decision: legacy 1.0.0.313 vs the
+   Dec-2025 rewrite (recommendation: the rewrite; P0 verifies its format).
+2. ~~Hosting centralization~~ **RESOLVED (D5): Seth's Cloudflare account
+   runs the engine only** (Worker + D1: enrollment, metadata, keys/invites,
+   relay — flextext model; nothing that scales with users' data or could
+   get him throttled/charged). **All user data storage is owner-supplied**
+   (see Q5).
+3. ~~FLAC-at-rest~~ **RESOLVED (D3): WAV everywhere.** No FLAC at rest or
+   between databases; new recordings ALWAYS 16-bit mono WAV. One exception:
+   reference audio bundled DB→phone (playback-only) may be FLAC.
+4. ~~Reference block sizes~~ **RESOLVED (D4): Companion picks defaults**
+   (e.g. 1000-per-person), allocation visible in the health panel.
+5. ~~Master audio folder~~ **RESOLVED (D5+D10): reframed — general-purpose
+   tool**, not a Fayu migration. Owners bring their own storage: Google
+   Drive AND owner-R2 backends both supported from day one behind one
+   pluggable content-addressed blob store (§4.4).
+6. ~~Same-column edits?~~ **RESOLVED (D9): assume overlap** — the
+   plain-language conflict UI is first-class.
+7. ~~Desktop stack~~ **RESOLVED (D6): Flutter for Windows**, sharing
+   `dekereke_core` (built, tested, CI-covered) with the phone app.

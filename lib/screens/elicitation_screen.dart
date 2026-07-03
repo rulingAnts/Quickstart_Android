@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dekereke_core/dekereke_core.dart' show DekTask;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -7,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import '../models/wordlist_entry.dart';
 import '../providers/wordlist_provider.dart';
 import '../services/audio_service.dart';
+import '../services/task_service.dart';
+import '../widgets/task_entry_editor.dart';
 
 class ElicitationScreen extends StatefulWidget {
   const ElicitationScreen({super.key});
@@ -18,6 +21,10 @@ class ElicitationScreen extends StatefulWidget {
 class _ElicitationScreenState extends State<ElicitationScreen> {
   final AudioService _audioService = AudioService();
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final TaskService _taskService = TaskService();
+
+  /// Resolved once per visit: a task drives the editor layout when active.
+  late final Future<DekTask?> _activeTask = _taskService.getActiveTask();
 
   @override
   void initState() {
@@ -54,35 +61,54 @@ class _ElicitationScreenState extends State<ElicitationScreen> {
           ),
         ],
       ),
-      body: Consumer<WordlistProvider>(
-        builder: (context, provider, child) {
-          final entry = provider.currentEntry;
-
-          if (entry == null) {
-            return const Center(
-              child: Text('No wordlist loaded'),
-            );
+      body: FutureBuilder<DekTask?>(
+        future: _activeTask,
+        builder: (context, taskSnapshot) {
+          if (taskSnapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
           }
+          final task = taskSnapshot.data;
+          return Consumer<WordlistProvider>(
+            builder: (context, provider, child) {
+              final entry = provider.currentEntry;
 
-          return Column(
-            children: [
-              LinearProgressIndicator(
-                value: provider.totalCount > 0
-                    ? provider.completedCount / provider.totalCount
-                    : 0,
-              ),
-              Expanded(
-                // Keyed by entry id: navigating to another word rebuilds the
-                // editor with that word's saved transcription and audio.
-                child: _EntryEditor(
-                  key: ValueKey(entry.id),
-                  entry: entry,
-                  provider: provider,
-                  audioService: _audioService,
-                  audioPlayer: _audioPlayer,
-                ),
-              ),
-            ],
+              if (entry == null) {
+                return const Center(
+                  child: Text('No wordlist loaded'),
+                );
+              }
+
+              return Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: provider.totalCount > 0
+                        ? provider.completedCount / provider.totalCount
+                        : 0,
+                  ),
+                  Expanded(
+                    // Keyed by entry id: navigating to another word rebuilds
+                    // the editor with that word's saved data.
+                    child: task != null && entry.dkSyncId != null
+                        ? TaskEntryEditor(
+                            key: ValueKey(entry.id),
+                            task: task,
+                            entry: entry,
+                            provider: provider,
+                            audioService: _audioService,
+                            audioPlayer: _audioPlayer,
+                            taskService: _taskService,
+                          )
+                        : _EntryEditor(
+                            key: ValueKey(entry.id),
+                            entry: entry,
+                            provider: provider,
+                            audioService: _audioService,
+                            audioPlayer: _audioPlayer,
+                          ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),

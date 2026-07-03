@@ -1,8 +1,16 @@
-# Sample data (that I can't distribute in the same repository)
+# Node (Cloudflare Worker under workers/)
+**/node_modules/
+workers/dekereke-sync/dist/
+workers/dekereke-sync/.wrangler/
+
+# Sample data (that I can't distribute in the same repository).
+# Anchored to the repo root: bare names would swallow any same-named
+# directory anywhere in the tree (a bare `audio` once silently ignored
+# packages/dekereke_core/lib/src/audio/).
 QWOM2025-08.xml
-wordlist
-audio
-audio/*.*
+/wordlist
+/audio
+/audio/*.*
 
 # But allow test data
 !test_data/

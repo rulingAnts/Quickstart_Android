@@ -103,13 +103,17 @@ at connect.flextext.app) is the field-tested model. Key transplants:
 |---|---|---|
 | D1 | Pin minimum Dekereke version, Windows-only v1 | **Decided** (Seth 2026-07-02); which build → pending P0/Seth |
 | D2 | Identity = synced sidecar map + checkpoint re-binding ladder (content hash → SoundFile → Reference+Gloss → position → prompt); NO in-file ID column in v1 | **Decided** (plan §4.2) |
-| D3 | FLAC in cloud/transit, WAV on disk | Recommended, awaiting Seth's yes (Q3) |
-| D4 | Reference labels auto-assigned from per-collaborator blocks | Recommended (Q4) |
-| D5 | Text history in GitHub private repo (device-flow sign-in); audio blobs in R2 behind invite-auth Worker; colleagues need zero accounts | Planned (Q2 decides which CF account) |
-| D6 | Desktop = Flutter (Windows) sharing `dekereke_core` with phone app | Recommended, awaiting confirmation (Q7) |
+| D3 | **WAV everywhere** — no FLAC at rest or between databases; new recordings are ALWAYS 16-bit mono WAV. Single exception: reference audio exported DB→phone in `.dektask` (playback-only) MAY be FLAC to cut size/bandwidth; never the other direction | **Decided** (Seth 2026-07-02, Q3 — overturns the earlier FLAC-in-cloud recommendation) |
+| D4 | Reference labels auto-assigned from per-collaborator blocks; Companion picks sensible defaults (e.g. 1000/person), allocation visible in the health panel | **Decided** (Seth 2026-07-02, Q4) |
+| D5 | Seth's Cloudflare account hosts the **engine only** — Worker + D1 for accounts/enrollment, metadata, keys/invites, relay between app instances (flextext model). **No user data storage on his account**; nothing that can get him throttled/charged by others' usage. Each database owner brings their own storage for audio + DB repos: **both backends from day one** behind one pluggable content-addressed blob-store interface — owner's Google Drive (API-only: immutable sha256-named blobs, append-only, no Drive Sync app, no in-place edits — sidesteps every Drive weakness Seth named) and owner's own R2. Text history stays in the owner's GitHub private repo (device-flow). Colleagues still zero accounts: the Worker brokers short-lived storage access; audio bytes flow device↔owner storage directly | **Decided** (Seth 2026-07-02, Q2+Q5) |
+| D6 | Desktop = Flutter (Windows) sharing `dekereke_core` with phone app | **Decided** (Seth 2026-07-02, Q7) |
 | D7 | Phones = constrained satellites (task packages, leased writable columns), never peers | **Decided** (plan §4.2b, §5) |
+| D8 | Canonical form preserves file record order (draft plan said "Reference order"): sorting would break the exact-inverse guarantee, position-hint identity signals, and assumes P0 #3; Reference isn't sortable anyway (duplicates/blanks) | **Decided** (session 2026-07-02, engineering call — veto welcome); spec in `packages/dekereke_core/doc/canonical_form.md` |
+| D9 | Assume overlapping edits are common: the plain-language conflict UI is first-class (column leases still reduce conflicts but are not relied on) | **Decided** (Seth 2026-07-02, Q6) |
+| D10 | **Product scope:** general-purpose tool for many teams — Seth's own Fayu project is NOT the driving deployment. Typical owner starts from a local folder on one Windows machine and needs share/track/merge from there. (Seth's real files remain the format ground truth; the seeding/dedupe P0 items are now "typical user" features, not a Fayu migration) | **Decided** (Seth 2026-07-02, Q5 reframe) |
+| D11 | **Consent system** (full design: `docs/CONSENT_DESIGN.md` v1.2): flextext two-axis model (ask text/audio × confirm yesno/record/signature), adapted so consent covers a SCOPE — **per voice × per task**, one ceremony per task package, researcher-configurable re-consent button (default enabled) for voice/person changes, speaker-name field optional by default, task-builder advisory that everyone involved consents. Receipts tamper-evident (canonical-JSON hash + per-device chain + audio hashes + playback evidence), stamped onto every collected item, bundled in exports. No IP/location in v1; withdrawal exports items flagged, never silently dropped; time-based continuation optional, default none | **Decided** (Seth 2026-07-03, Q-A..Q-D) |
 
-Open questions Q2–Q7: see plan §7 (Q1 resolved).
+All plan §7 questions are RESOLVED (Q1–Q7, 2026-07-02) — see the log above.
 
 ## P0 checklist (REQUIRES Seth's Windows VM — a cloud session cannot do these)
 
@@ -121,12 +125,24 @@ Open questions Q2–Q7: see plan §7 (Q1 resolved).
 6. Built-in recorder WAV spec; does it fill `SoundFile`; suffix-column support.
 7. Exact multi-file cell separator syntax.
 
-When Seth is ready, generate a test kit for him: a disposable TestDB with
-planted probe tags + a numbered click-by-click checklist.
+**Test kit ready** (2026-07-02): `test_data/p0_test_kit/` — disposable
+TestDB with planted probes, settings file, Update-From-File probe,
+audible test WAVs, and the numbered click-by-click
+[`CHECKLIST.md`](../test_data/p0_test_kit/CHECKLIST.md) covering items
+1–7 (~25 min on the VM). Regenerate with
+`dart tool/generate_p0_kit.dart` in `packages/dekereke_core`.
 
 ## Prioritized backlog for a cloud session (all doable in-repo)
 
-1. **`packages/dekereke_core`** (pure Dart, the heart — start here):
+1. ~~**`packages/dekereke_core`**~~ **DONE in PR #6** (2026-07-02): all
+   sub-items below implemented with 174 tests (fixture byte-identity
+   round-trips included) and a dedicated `dekereke-core` CI job — plus
+   beyond the original scope: object-level `diffRecords` (tracked
+   changes/history summaries), health panel rules (§4.2 Reference lint),
+   Reference block allocation (D4), and the content-addressed BlobStore
+   interface + audio sync planning (D5) with memory/filesystem backends.
+   Specs: `packages/dekereke_core/doc/canonical_form.md` +
+   `task_packages.md`. Original scope for reference:
    - Dekereke XML model + codec: port/extend the proven code in
      `lib/services/xml_service.dart` (UTF-16 LE/BE/UTF-8 sniffing +
      encodeUtf16Le already exist and are tested); add: nested/unknown
@@ -147,19 +163,44 @@ planted probe tags + a numbered click-by-click checklist.
      carrying the ID map.
    - Tests against `test_data/dekereke_fixtures/` (synthetic, format-
      faithful, safe to extend).
-2. **Phone app task mode** (plan §5.4): task import, config-driven
-   elicitation fields, suffix-aware recording names, `.dekresult` export.
-   Keep all 45 existing tests green.
-3. **Worker scaffold** (`workers/dekereke-sync/` or separate repo later):
-   D1 schema + invite/claim/poll endpoints per the patterns above. Deploy
-   is Seth's (GitHub Actions + wrangler), so build it deployment-ready with
-   its own additive migration files.
-4. **Companion desktop scaffold** (Flutter Windows) — UI shells for
-   history/restore and sync; the engine is dekereke_core. CI: GitHub
-   Actions windows runner can build it.
+2. ~~**Phone app task mode**~~ **DONE in PR #6** (2026-07-02, plan §5.4):
+   `.dektask` import, config-driven elicitation (visible/playable/writable
+   fields), suffix-aware 16-bit mono WAV recording, FLAC reference
+   playback, validated `.dekresult` export. All 45 pre-existing tests
+   green + 24 new. Smoke-test package: `test_data/sample_task/`.
+3. ~~**Worker scaffold**~~ **DONE in PR #6** (2026-07-02):
+   `workers/dekereke-sync/` — engine-only per D5 (no R2 binding, no user
+   blobs): owner bootstrap, one-time invites/claims (atomic, idempotent
+   retry), approval step, desired/reported two-lane relay with CAS.
+   Additive D1 migrations; 16 integration tests against real workerd+D1
+   (Miniflare); `worker-engine` CI job. Deploy remains Seth's (wrangler
+   steps documented in `wrangler.toml`/README).
+4. ~~**Companion desktop scaffold**~~ **DONE in PR #6** (2026-07-02):
+   `apps/companion/` — Flutter Windows shell sharing dekereke_core; the
+   Health check screen is already functional (real parser + health rules
+   against a picked database); History/Sync are plain-language
+   placeholders. Path-filtered `companion.yml` workflow: ubuntu
+   analyze/test + windows-2022 release build uploaded as the
+   `dekereke-companion-windows` artifact.
 
 Do NOT start server deployments, don't touch PR #5's app code except via
 its own branch, and keep every commit CI-green.
+
+### Queued: consent system implementation (design DECIDED — D11)
+
+`docs/CONSENT_DESIGN.md` v1.2 is fully decided (D11). Build order:
+1. `dekereke_core`: `ConsentConfig` (schema'd task.json consent block +
+   coherence validation), `ConsentReceipt` (canonical JSON + content
+   hash + per-device chain + deterministic .txt rendering), the §2.2
+   covering-receipt check in `validateResult`, `consent/` carriers in
+   `.dektask`/`.dekresult` (+ `receiptId`/`receiptSha256` on
+   values/recordings entries).
+2. Phone app: config-driven two-axis ceremony UI (generalize the
+   consent screen), re-consent button, withdrawal route (none exists
+   post-assent today), receipt stamping + additive DB migration.
+3. Companion (P3): consent config in the task builder + the fixed
+   everyone-consents advisory; receipt archive at merge-back; flagged
+   withdrawal surfacing.
 
 ## Working agreements
 
